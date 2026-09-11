@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion
 import { ArrowRight, Compass } from 'lucide-react'
 import { BlackHole } from './ui/black-hole'
 import { LiquidButton } from './ui/liquid-glass-button'
+import { ParticleBackground } from './ui/particle-background'
 import { soundEngine } from '../lib/audio-engine'
 
 interface KnowledgeSingularityHeroProps {
@@ -135,6 +136,17 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
         }}
         className="sticky top-0 h-[100svh] w-full overflow-hidden flex flex-col justify-between"
       >
+        {/* ============================================================ */}
+        {/* LAYER 0: ATMOSPHERIC PARTICLE CANVAS (Deepest Background)    */}
+        {/* ============================================================ */}
+        <div className="absolute inset-0 z-0 pointer-events-none w-full h-full">
+          <ParticleBackground
+            blackHoleCenter={bhCenter}
+            density="sparse"
+            className="w-full h-full"
+          />
+        </div>
+
         {/* ============================================================ */}
         {/* LAYER 1: BLACK HOLE SHADER (Full Viewport Overscan, No Clip) */}
         {/* ============================================================ */}
