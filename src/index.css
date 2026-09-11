@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@layer base {
+  :root {
+    --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'Geist Mono', monospace;
+
+    --background: #020304;
+    --foreground: #F5F5F2;
+    --color-background: #020304;
+    --primary: #69DDF5;
+    --primary-foreground: #020304;
+    --muted: #07151c;
+    --muted-foreground: rgba(245, 245, 242, 0.55);
+    --border: rgba(255, 255, 255, 0.10);
+    --accent: rgba(105, 221, 245, 0.12);
+    --ring: #69DDF5;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #020304;
+    color: #F5F5F2;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Shadcn utility mappings */
+.text-primary {
+  color: var(--primary);
+}
+.bg-primary {
+  background-color: var(--primary);
+}
+.text-primary-foreground {
+  color: var(--primary-foreground);
+}
+.text-muted-foreground {
+  color: var(--muted-foreground);
+}
+.border-border {
+  border-color: var(--border);
+}
+.bg-background {
+  background-color: var(--background);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020205;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #171b26;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #252c3d;
+}
+
+/* Subtle Starfield / Grid utilities */
+.cosmic-grain {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 0);
+  background-size: 32px 32px;
+}
+
+.glow-cyan {
+  box-shadow: 0 0 35px -5px rgba(6, 182, 212, 0.35);
+}
+
+.glow-node {
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.7));
+}
+
+.font-mono-code {
+  font-family: var(--font-mono);
+}
+
+.font-editorial {
+  font-family: var(--font-display);
+  letter-spacing: -0.04em;
+}
+
+/* Glass panel styling */
+.glass-panel {
+  background: rgba(10, 12, 18, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-panel-subtle {
+  background: rgba(8, 10, 15, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Central headline shield mask to ensure 100% readability */
+.headline-mask {
+  background: radial-gradient(ellipse 65% 55% at 50% 50%, #020205 25%, rgba(2, 2, 5, 0.85) 60%, transparent 100%);
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.04); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-subtle 5s ease-in-out infinite;
+}
