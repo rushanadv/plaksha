@@ -180,13 +180,26 @@ void main() {
   float edgeFade = 1.0 - smoothstep(0.48, 0.72, r);
   finalColor *= edgeFade;
 
-  gl_FragColor = vec4(finalColor, 1.0);
+  // 10. Alpha Compositing (Allows atmospheric particle background behind the black hole)
+  // Inside event horizon void: opaque black void (blocks light from behind)
+  float voidAlpha = (1.0 - eventHorizonMask) * u_intensity;
+  // In the glowing accretion disk and photon ring: alpha proportional to emission luminance
+  float gasLuminance = max(finalColor.r, max(finalColor.g, finalColor.b));
+  float gasAlpha = clamp(gasLuminance * 2.8, 0.0, 1.0);
+  float totalAlpha = clamp(voidAlpha + gasAlpha, 0.0, 1.0);
+
+  // If inside void, preserve pure #020304 deep black
+  if (r < rs) {
+    finalColor = vec3(0.0078, 0.0118, 0.0157);
+  }
+
+  gl_FragColor = vec4(finalColor, totalAlpha);
 }
 `
 
 export function createRenderer(options: RendererOptions): BlackHoleRenderer {
   const { canvas, center = [0.70, 0.48] } = options
-  const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
+  const gl = canvas.getContext('webgl2', { alpha: true }) || canvas.getContext('webgl', { alpha: true })
 
   if (!gl) {
     console.warn('WebGL not supported for BlackHole renderer')

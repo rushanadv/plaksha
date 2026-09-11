@@ -61,6 +61,7 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
   onOpenUploadModal,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: -9999, y: -9999, active: false })
   const prefersReduced = useReducedMotion()
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState<boolean>(false)
@@ -130,6 +131,17 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
     >
       {/* Sticky 100svh Viewport Container */}
       <motion.div
+        onPointerMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect()
+          mouseRef.current.x = e.clientX - rect.left
+          mouseRef.current.y = e.clientY - rect.top
+          mouseRef.current.active = true
+        }}
+        onPointerLeave={() => {
+          mouseRef.current.active = false
+          mouseRef.current.x = -9999
+          mouseRef.current.y = -9999
+        }}
         style={{
           opacity: stageOpacity,
           y: prefersReduced ? 0 : stageY,
@@ -143,6 +155,7 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
           <ParticleBackground
             blackHoleCenter={bhCenter}
             density="sparse"
+            mouseRef={mouseRef}
             className="w-full h-full"
           />
         </div>
