@@ -1,60 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Compass } from 'lucide-react'
+import { Compass } from 'lucide-react'
 import { BlackHole } from './ui/black-hole'
 import { LiquidButton } from './ui/liquid-glass-button'
 import { ParticleBackground } from './ui/particle-background'
+import { KnowledgeConstellationCanvas } from './ui/knowledge-constellation-canvas'
 import { soundEngine } from '../lib/audio-engine'
 
 interface KnowledgeSingularityHeroProps {
   onOpenUploadModal: () => void
 }
-
-interface ConstellationNode {
-  id: string
-  label: string
-  category: string
-  x: number
-  y: number
-  size: number
-  isAnchorDefault: boolean
-  phase: 1 | 2
-}
-
-// Strictly curated academic nodes with Art-Directed Exclusion Zone
-// Protected Left Editorial Zone (x: 0..48, y: 22..68) has ZERO nodes
-const CONSTELLATION_NODES: ConstellationNode[] = [
-  // Phase 1 Foundational Core Nodes (Emerge in Transformation pause 38%-56% scroll)
-  { id: 'functions', label: 'Functions', category: 'CALCULUS', x: 56, y: 38, size: 4.8, isAnchorDefault: true, phase: 1 },
-  { id: 'limits', label: 'Limits', category: 'CALCULUS', x: 65, y: 30, size: 5.0, isAnchorDefault: true, phase: 1 },
-  { id: 'derivatives', label: 'Derivatives', category: 'CALCULUS', x: 76, y: 26, size: 5.2, isAnchorDefault: true, phase: 1 },
-  { id: 'vectors', label: 'Vectors', category: 'LINEAR ALGEBRA', x: 80, y: 46, size: 5.0, isAnchorDefault: true, phase: 1 },
-  { id: 'matrices', label: 'Matrices', category: 'LINEAR ALGEBRA', x: 86, y: 58, size: 4.8, isAnchorDefault: true, phase: 1 },
-
-  // Phase 2 Expansion Nodes (Blossom 56%-78% scroll)
-  { id: 'chain-rule', label: 'Chain Rule', category: 'CALCULUS', x: 86, y: 34, size: 3.8, isAnchorDefault: false, phase: 2 },
-  { id: 'integrals', label: 'Integrals', category: 'CALCULUS', x: 62, y: 50, size: 4.0, isAnchorDefault: false, phase: 2 },
-  { id: 'probability', label: 'Probability', category: 'PROBABILITY', x: 58, y: 66, size: 4.0, isAnchorDefault: false, phase: 2 },
-  { id: 'bayes', label: "Bayes' Law", category: 'PROBABILITY', x: 68, y: 76, size: 4.8, isAnchorDefault: true, phase: 2 },
-  { id: 'attention', label: 'Attention', category: 'MACHINE LEARNING', x: 82, y: 74, size: 5.0, isAnchorDefault: true, phase: 2 },
-]
-
-const CONSTELLATION_EDGES = [
-  // Phase 1 Core Connections
-  { s: 'functions', t: 'limits', phase: 1 },
-  { s: 'limits', t: 'derivatives', phase: 1 },
-  { s: 'derivatives', t: 'vectors', phase: 1 },
-  { s: 'vectors', t: 'matrices', phase: 1 },
-
-  // Phase 2 Expansion Connections
-  { s: 'derivatives', t: 'chain-rule', phase: 2 },
-  { s: 'functions', t: 'integrals', phase: 2 },
-  { s: 'integrals', t: 'probability', phase: 2 },
-  { s: 'probability', t: 'bayes', phase: 2 },
-  { s: 'matrices', t: 'attention', phase: 2 },
-  { s: 'bayes', t: 'attention', phase: 2 },
-  { s: 'vectors', t: 'attention', phase: 2 },
-]
 
 export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> = ({
   onOpenUploadModal,
@@ -62,7 +17,6 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: -9999, y: -9999, active: false })
   const prefersReduced = useReducedMotion()
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState<boolean>(false)
 
   useEffect(() => {
@@ -72,64 +26,123 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Master Normalized Scroll Tracking: 0 to 1 across the 220vh stage
+  // =========================================================================
+  // ONE BOUNDED STICKY HERO (300vh wrapper with a 100svh sticky viewport)
+  // Region A: Scene 1 (0.00 -> 0.36)
+  // Region B: Scene 2 Locked Plateau (0.36 -> 0.70, absolute plateau 0.46 -> 0.70)
+  // Region C: Exit to next section (0.70 -> 1.00)
+  // =========================================================================
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ['start start', 'end end'],
   })
 
-  // =========================================================================
-  // ARCHITECTURAL SCROLL TIMELINE CHOREOGRAPHY
-  // 0.00 -> 0.22: Scene 1 Opening
-  // 0.22 -> 0.38: Scene 1 Exit (vis: hidden at >= 0.38)
-  // 0.38 -> 0.56: Transformation Pause (particles stream, core nodes appear)
-  // 0.56 -> 0.78: Scene 2 Reveal (secondary nodes blossom, copy enters)
-  // 0.78 -> 0.94: Scene 2 Stable State (clear focus, readable, calm)
-  // 0.94 -> 1.00: Release to Next Section (gentle dissolve to #020304)
-  // =========================================================================
-
   // 1. Black Hole Shader Transforms
-  const blackHoleIntensity = useTransform(scrollYProgress, [0, 0.38, 0.56, 0.78, 0.94, 1.0], [1.0, 0.95, 0.85, 0.38, 0.20, 0])
-  const blackHoleOpacity = useTransform(scrollYProgress, [0, 0.78, 0.94, 1.0], [1.0, 0.85, 0.35, 0])
-  const blackHoleScale = useTransform(scrollYProgress, [0, 0.38, 0.78, 1.0], [1.0, 0.98, 0.92, 0.88])
-  const blackHoleX = useTransform(scrollYProgress, [0, 0.38, 0.78], ['0vw', '1.5vw', '3vw'])
+  // In Scene 2, the black hole recedes to a faint background ghost (0.10 opacity)
+  const blackHoleIntensity = useTransform(scrollYProgress, [0, 0.22, 0.38, 0.46, 0.70, 0.86], [1.0, 1.0, 0.50, 0.18, 0.18, 0])
+  const blackHoleOpacity = useTransform(scrollYProgress, [0, 0.22, 0.38, 0.46, 0.70, 0.86], [1.0, 1.0, 0.40, 0.10, 0.10, 0])
+  const blackHoleScale = useTransform(scrollYProgress, [0, 0.38, 0.46, 0.70, 0.86], [1.0, 0.96, 0.92, 0.92, 0.88])
+  const blackHoleX = useTransform(scrollYProgress, [0, 0.38, 0.46, 0.70, 0.86], ['0vw', '1.5vw', '2vw', '2vw', '3vw'])
 
   // 2. SCENE 1: "Knowledge has gravity." (0.00 -> 0.22 hold, 0.22 -> 0.38 exit)
   // At >= 0.38, visibility is strictly hidden to guarantee zero ghost text!
   const scene1Opacity = useTransform(scrollYProgress, [0.22, 0.38], [1, 0])
-  const scene1Y = useTransform(scrollYProgress, [0.22, 0.38], [0, -30])
-  const scene1Blur = useTransform(scrollYProgress, [0.22, 0.38], ['blur(0px)', 'blur(8px)'])
+  const scene1Y = useTransform(scrollYProgress, [0.22, 0.38], [0, -24])
+  const scene1Blur = useTransform(scrollYProgress, [0.22, 0.38], ['blur(0px)', 'blur(6px)'])
   const scene1Visibility = useTransform(scrollYProgress, (v) => (v < 0.38 ? 'visible' : 'hidden'))
 
-  // 3. TRANSFORMATION INTERVAL (0.38 -> 0.56)
-  // Escaping particles from singularity center-rightwards during visual pause
-  const driftParticlesOpacity = useTransform(scrollYProgress, [0.38, 0.47, 0.56], [0, 1.0, 0.15])
+  // 3. SCENE 2: "Your syllabus, made visible." (0.38 -> 0.46 assemble, 0.46 -> 0.70 LOCKED PLATEAU, 0.70 -> 0.86 exit)
+  const scene2Opacity = useTransform(scrollYProgress, [0.38, 0.46, 0.70, 0.86], [0, 1, 1, 0])
+  const scene2Y = useTransform(scrollYProgress, [0.38, 0.46, 0.70, 0.86], [20, 0, 0, -20])
+  const scene2Blur = useTransform(scrollYProgress, [0.38, 0.46, 0.70, 0.86], ['blur(6px)', 'blur(0px)', 'blur(0px)', 'blur(6px)'])
+  const scene2Visibility = useTransform(scrollYProgress, (v) => (v >= 0.36 && v <= 0.88 ? 'visible' : 'hidden'))
 
-  // 4. CONSTELLATION EMERGENCE
-  // Phase 1 Foundational Core (0.40 -> 0.54)
-  const phase1Opacity = useTransform(scrollYProgress, [0.40, 0.54], [0, 1])
-  // Phase 2 Expansion (0.58 -> 0.74)
-  const phase2Opacity = useTransform(scrollYProgress, [0.58, 0.74], [0, 1])
-
-  // 5. SCENE 2: "Your syllabus, made visible." (0.58 -> 0.76 reveal, 0.78 -> 0.94 stable)
-  const scene2Opacity = useTransform(scrollYProgress, [0.58, 0.76], [0, 1])
-  const scene2Y = useTransform(scrollYProgress, [0.58, 0.76], [24, 0])
-  const scene2Blur = useTransform(scrollYProgress, [0.58, 0.76], ['blur(8px)', 'blur(0px)'])
-  const scene2Visibility = useTransform(scrollYProgress, (v) => (v >= 0.56 && v <= 0.96 ? 'visible' : 'hidden'))
-
-  // 6. EXIT TO WEBSITE (0.94 -> 1.00)
-  const stageOpacity = useTransform(scrollYProgress, [0.94, 1.00], [1, 0])
-  const stageY = useTransform(scrollYProgress, [0.94, 1.00], [0, -25])
+  // 4. EXIT TO NEXT WEBSITE SECTION (0.86 -> 1.00)
+  const stageOpacity = useTransform(scrollYProgress, [0.86, 0.98], [1, 0])
+  const stageY = useTransform(scrollYProgress, [0.86, 0.98], [0, -20])
 
   // Initial Scroll Indicator (0.00 -> 0.14)
   const scrollIndicatorOpacity = useTransform(scrollYProgress, [0, 0.14], [1, 0])
 
+  // Singularity center point for atmospheric layers
   const bhCenter: [number, number] = isMobile ? [0.50, 0.62] : [0.70, 0.48]
+
+  // =========================================================================
+  // LOCALIZED SOFT SETTLE INTO SCENE 2 ANCHOR (at progress ~ 0.50)
+  // Fires only after idle delay (~140ms) when stopped in transition window [0.36, 0.52].
+  // Never hijacks active scrolling. Smooth reverse scrolling and continuation work seamlessly.
+  // =========================================================================
+  useEffect(() => {
+    if (prefersReduced) return
+
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
+    let isSettling = false
+    let lastScrollY = window.scrollY || window.pageYOffset
+
+    const checkSettle = () => {
+      if (isSettling) return
+      const container = containerRef.current
+      if (!container) return
+
+      const rect = container.getBoundingClientRect()
+      const scrollY = window.scrollY || window.pageYOffset
+      const containerTop = scrollY + rect.top
+      const maxScroll = container.scrollHeight - window.innerHeight
+      if (maxScroll <= 0) return
+
+      const currentP = (scrollY - containerTop) / maxScroll
+      const isScrollingDown = scrollY >= lastScrollY
+      lastScrollY = scrollY
+
+      // When stopped near the Scene 2 transition [0.36, 0.52] and not already settled at 0.50
+      if (currentP >= 0.36 && currentP <= 0.52 && Math.abs(currentP - 0.50) > 0.035) {
+        // If user was scrolling upwards back to Scene 1, do not drag them down
+        if (!isScrollingDown && currentP < 0.42) return
+
+        const targetScrollY = Math.round(containerTop + 0.50 * maxScroll)
+        isSettling = true
+
+        window.scrollTo({
+          top: targetScrollY,
+          behavior: 'smooth',
+        })
+
+        setTimeout(() => {
+          isSettling = false
+        }, 450)
+      }
+    }
+
+    const onScroll = () => {
+      if (idleTimer) clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => {
+        checkSettle()
+      }, 140)
+    }
+
+    const onScrollEnd = () => {
+      if (idleTimer) clearTimeout(idleTimer)
+      checkSettle()
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    if ('onscrollend' in window) {
+      window.addEventListener('scrollend', onScrollEnd, { passive: true })
+    }
+
+    return () => {
+      if (idleTimer) clearTimeout(idleTimer)
+      window.removeEventListener('scroll', onScroll)
+      if ('onscrollend' in window) {
+        window.removeEventListener('scrollend', onScrollEnd)
+      }
+    }
+  }, [prefersReduced])
 
   return (
     <section
       ref={containerRef}
-      className="relative w-full h-[220vh] bg-[#020304] text-[#F5F5F2] select-none"
+      className="relative w-full h-[300vh] bg-[#020304] text-[#F5F5F2] select-none"
     >
       {/* Sticky 100svh Viewport Container */}
       <motion.div
@@ -181,171 +194,29 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
         </motion.div>
 
         {/* ============================================================ */}
-        {/* LAYER 2: SUBTLE COORDINATE AXIS LINE                         */}
+        {/* LAYER 2: SUBTLE COORDINATE AXIS LINE (Scene 1 Atmosphere)    */}
         {/* ============================================================ */}
         <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.04]">
           <div className="absolute top-0 bottom-0 left-[70%] w-[1px] bg-white hidden md:block" />
         </div>
 
         {/* ============================================================ */}
-        {/* LAYER 3: CONSTELLATION GRAPH (Protected Exclusion Zone)      */}
+        {/* LAYER 3: SCENE 2 CENTERED CONSTELLATION CANVAS               */}
+        {/* Centered at 50vw, 50vh with Curated Nodes + Aether Ambience  */}
         {/* ============================================================ */}
-        <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
-          <svg
-            className="w-full h-full max-w-[1440px] mx-auto overflow-visible"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <defs>
-              <filter id="hero-node-glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="0.8" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            {/* Escaping particles during Transformation Pause (Scroll 0.38 -> 0.56) */}
-            <motion.g style={{ opacity: driftParticlesOpacity }}>
-              <circle cx="68" cy="48" r="0.6" fill="#e8fbff" filter="url(#hero-node-glow)" />
-              <circle cx="64" cy="52" r="0.5" fill="#8edff2" />
-              <circle cx="75" cy="44" r="0.45" fill="#36b7df" />
-              <circle cx="72" cy="60" r="0.5" fill="#8edff2" />
-              <circle cx="78" cy="36" r="0.4" fill="#e8fbff" />
-              <circle cx="82" cy="50" r="0.45" fill="#8edff2" />
-            </motion.g>
-
-            {/* Phase 1 Edges */}
-            <motion.g style={{ opacity: phase1Opacity }}>
-              {CONSTELLATION_EDGES.filter((e) => e.phase === 1).map((edge) => {
-                const source = CONSTELLATION_NODES.find((n) => n.id === edge.s)
-                const target = CONSTELLATION_NODES.find((n) => n.id === edge.t)
-                if (!source || !target) return null
-                return (
-                  <line
-                    key={`${edge.s}-${edge.t}`}
-                    x1={source.x}
-                    y1={source.y}
-                    x2={target.x}
-                    y2={target.y}
-                    stroke="rgba(232, 251, 255, 0.28)"
-                    strokeWidth="0.25"
-                    strokeDasharray="0.8 0.8"
-                  />
-                )
-              })}
-            </motion.g>
-
-            {/* Phase 2 Edges */}
-            <motion.g style={{ opacity: phase2Opacity }}>
-              {CONSTELLATION_EDGES.filter((e) => e.phase === 2).map((edge) => {
-                const source = CONSTELLATION_NODES.find((n) => n.id === edge.s)
-                const target = CONSTELLATION_NODES.find((n) => n.id === edge.t)
-                if (!source || !target) return null
-                return (
-                  <line
-                    key={`${edge.s}-${edge.t}`}
-                    x1={source.x}
-                    y1={source.y}
-                    x2={target.x}
-                    y2={target.y}
-                    stroke="rgba(142, 223, 242, 0.18)"
-                    strokeWidth="0.2"
-                  />
-                )
-              })}
-            </motion.g>
-
-            {/* Phase 1 Nodes */}
-            <motion.g style={{ opacity: phase1Opacity }}>
-              {CONSTELLATION_NODES.filter((n) => n.phase === 1).map((node) => {
-                const isHovered = hoveredNodeId === node.id
-                return (
-                  <g
-                    key={node.id}
-                    className="pointer-events-auto cursor-pointer"
-                    onMouseEnter={() => {
-                      setHoveredNodeId(node.id)
-                      soundEngine.playHover()
-                    }}
-                    onMouseLeave={() => setHoveredNodeId(null)}
-                    onClick={() => soundEngine.playNodeSelect()}
-                  >
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={node.size * 0.25}
-                      fill={isHovered ? '#69DDF5' : '#e8fbff'}
-                      filter="url(#hero-node-glow)"
-                    />
-                    <text
-                      x={node.x}
-                      y={node.y + node.size * 0.25 + 2.0}
-                      textAnchor="middle"
-                      fill="rgba(245, 245, 242, 0.75)"
-                      fontSize="1.05"
-                      fontFamily="var(--font-mono)"
-                      letterSpacing="0.08em"
-                      className="pointer-events-none select-none uppercase"
-                    >
-                      {node.label}
-                    </text>
-                  </g>
-                )
-              })}
-            </motion.g>
-
-            {/* Phase 2 Nodes (Strictly 3-5 labels default, dots for rest) */}
-            <motion.g style={{ opacity: phase2Opacity }}>
-              {CONSTELLATION_NODES.filter((n) => n.phase === 2).map((node) => {
-                const isHovered = hoveredNodeId === node.id
-                const showLabel = node.isAnchorDefault || isHovered
-
-                return (
-                  <g
-                    key={node.id}
-                    className="pointer-events-auto cursor-pointer"
-                    onMouseEnter={() => {
-                      setHoveredNodeId(node.id)
-                      soundEngine.playHover()
-                    }}
-                    onMouseLeave={() => setHoveredNodeId(null)}
-                    onClick={() => soundEngine.playNodeSelect()}
-                  >
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={isHovered ? node.size * 0.35 : node.size * 0.22}
-                      fill={isHovered ? '#69DDF5' : node.isAnchorDefault ? '#e8fbff' : 'rgba(142, 223, 242, 0.45)'}
-                      filter={isHovered ? 'url(#hero-node-glow)' : undefined}
-                      className="transition-all duration-200"
-                    />
-
-                    {showLabel && (
-                      <text
-                        x={node.x}
-                        y={node.y + node.size * 0.25 + 2.0}
-                        textAnchor="middle"
-                        fill={isHovered ? '#69DDF5' : 'rgba(245, 245, 242, 0.65)'}
-                        fontSize="0.95"
-                        fontFamily="var(--font-mono)"
-                        letterSpacing="0.08em"
-                        className="pointer-events-none select-none uppercase transition-colors duration-200"
-                      >
-                        {node.label}
-                      </text>
-                    )}
-                  </g>
-                )
-              })}
-            </motion.g>
-          </svg>
+        <div className="absolute inset-0 z-20 pointer-events-auto">
+          <KnowledgeConstellationCanvas
+            progress={scrollYProgress}
+            className="w-full h-full"
+            onNodeSelect={(_nodeId) => {
+              // Node select sound already played; preserves interactive responsiveness
+            }}
+          />
         </div>
 
         {/* ============================================================ */}
-        {/* LAYER 4: SCENE 1 ("Knowledge has gravity.") (0.00 -> 0.34)   */}
-        {/* 100% GONE at 0.34: visibility: hidden, zero ghost text!      */}
+        {/* LAYER 4: SCENE 1 ("Knowledge has gravity.") (0.00 -> 0.38)   */}
+        {/* 100% GONE at 0.38: visibility: hidden, zero ghost text!      */}
         {/* ============================================================ */}
         <motion.div
           style={{
@@ -422,8 +293,9 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
         </motion.div>
 
         {/* ============================================================ */}
-        {/* LAYER 5: SCENE 2 ("Your syllabus, made visible.") (0.68->0.94) */}
-        {/* Enters ONLY at 0.68 (34% after Scene 1 is gone), exits at 0.94 */}
+        {/* LAYER 5: SCENE 2 ("Your syllabus, made visible.")            */}
+        {/* Enters at 0.38, LOCKED PLATEAU 0.46 -> 0.70, Exits at 0.86  */}
+        {/* Framed top & bottom around the centered 50vw/50vh canvas     */}
         {/* ============================================================ */}
         <motion.div
           style={{
@@ -432,36 +304,36 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
             filter: scene2Blur,
             visibility: scene2Visibility as any,
           }}
-          className="absolute z-30 left-0 top-[30vh] sm:top-[34vh] w-full px-8 sm:px-12 md:pl-[8vw] md:pr-0 flex flex-col items-start pointer-events-none"
+          className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-between p-6 sm:p-10 md:py-12 md:px-16"
         >
-          <div className="max-w-[540px]">
-            {/* Eyebrow */}
-            <div className="font-mono text-[11px] tracking-[0.25em] text-[#69DDF5]/80 uppercase mb-5 sm:mb-6">
-              STRUCTURE REVEALED
+          {/* Top Header: Eyebrow + Headline + Supporting Sentence */}
+          <div className="w-full max-w-[720px] mx-auto text-center mt-2 sm:mt-4">
+            <div className="font-mono text-[10px] sm:text-[11px] tracking-[0.25em] text-[#69DDF5]/85 uppercase mb-3 sm:mb-4">
+              STRUCTURE REVEALED / KNOWLEDGE SYSTEM
             </div>
 
-            {/* Headline */}
             <h2
               style={{
-                fontSize: 'clamp(52px, 6.5vw, 104px)',
-                lineHeight: 0.93,
-                letterSpacing: '-0.05em',
+                fontSize: 'clamp(32px, 4.2vw, 56px)',
+                lineHeight: 1.02,
+                letterSpacing: '-0.045em',
               }}
-              className="font-sans font-semibold text-[#F5F5F2] mb-6 sm:mb-7 select-none text-balance"
+              className="font-sans font-semibold text-[#F5F5F2] mb-3 sm:mb-4 select-none"
             >
-              Your syllabus,<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F5F5F2] to-[#69DDF5]">
+              Your syllabus,{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F5F5F2] via-[#8edff2] to-[#69DDF5]">
                 made visible.
               </span>
             </h2>
 
-            {/* Supporting Sentence */}
-            <p className="font-sans text-[16px] sm:text-[18px] text-[rgba(245,245,242,0.6)] max-w-[440px] font-normal leading-relaxed mb-8 sm:mb-9 text-balance">
+            <p className="font-sans text-[14px] sm:text-[16px] text-[rgba(245,245,242,0.65)] max-w-[540px] mx-auto font-normal leading-relaxed text-balance">
               GuruKul maps what you need to learn, shows how everything connects, and makes every answer traceable to its source.
             </p>
+          </div>
 
-            {/* Action CTAs */}
-            <div className="pointer-events-auto flex items-center gap-6">
+          {/* Bottom Action Bar */}
+          <div className="w-full flex items-center justify-center gap-6 mb-2 sm:mb-4">
+            <div className="pointer-events-auto">
               <LiquidButton
                 onClick={() => {
                   soundEngine.playNodeSelect()
@@ -472,16 +344,16 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
               >
                 <span>Explore your syllabus</span>
               </LiquidButton>
-
-              <a
-                href="#syllabus-reveal"
-                onClick={() => soundEngine.playHover()}
-                className="font-mono text-xs tracking-wider uppercase text-white/40 hover:text-white/80 transition-colors cursor-pointer hidden sm:inline"
-              >
-                <Compass className="w-3.5 h-3.5 inline-block mr-1 text-[#69DDF5]" />
-                How it works
-              </a>
             </div>
+
+            <a
+              href="#syllabus-reveal"
+              onClick={() => soundEngine.playHover()}
+              className="pointer-events-auto font-mono text-xs tracking-wider uppercase text-white/40 hover:text-white/80 transition-colors cursor-pointer hidden sm:flex items-center"
+            >
+              <Compass className="w-3.5 h-3.5 inline-block mr-1.5 text-[#69DDF5]" />
+              How it works
+            </a>
           </div>
         </motion.div>
 

@@ -61,6 +61,8 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
   mouseRef,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const bhX = blackHoleCenter[0]
+  const bhY = blackHoleCenter[1]
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -430,7 +432,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
       observer.disconnect()
       resizeObserver.disconnect()
     }
-  }, [blackHoleCenter, density, opacity, mouseRef])
+  }, [bhX, bhY, density, opacity, mouseRef])
 
   return (
     <canvas
