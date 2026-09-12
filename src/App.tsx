@@ -31,11 +31,10 @@ export function App() {
       <Navbar onOpenUploadModal={() => setIsUploadModalOpen(true)} />
 
       <main className="w-full flex flex-col">
-        {/* Cinematic Knowledge Singularity Hero (Opening Sequence) */}
-        <KnowledgeSingularityHero onOpenUploadModal={() => setIsUploadModalOpen(true)} />
-
-        {/* Existing Interactive Knowledge Constellation & Observatory */}
-        <HeroConstellation onOpenUploadModal={() => setIsUploadModalOpen(true)} />
+        {/* Cinematic Knowledge Singularity Hero with Seamless Scene 3 Transition */}
+        <KnowledgeSingularityHero onOpenUploadModal={() => setIsUploadModalOpen(true)}>
+          <HeroConstellation onOpenUploadModal={() => setIsUploadModalOpen(true)} />
+        </KnowledgeSingularityHero>
 
         {/* 6-Phase Transformation Reveal */}
         <SyllabusReveal />

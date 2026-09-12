@@ -5,14 +5,18 @@ import { BlackHole } from './ui/black-hole'
 import { LiquidButton } from './ui/liquid-glass-button'
 import { ParticleBackground } from './ui/particle-background'
 import { KnowledgeConstellationCanvas } from './ui/knowledge-constellation-canvas'
+import { SceneTransitionBridge } from './ui/SceneTransitionBridge'
+import { HeroConstellation } from './HeroConstellation'
 import { soundEngine } from '../lib/audio-engine'
 
 interface KnowledgeSingularityHeroProps {
   onOpenUploadModal: () => void
+  children?: React.ReactNode
 }
 
 export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> = ({
   onOpenUploadModal,
+  children,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: -9999, y: -9999, active: false })
@@ -27,10 +31,11 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
   }, [])
 
   // =========================================================================
-  // ONE BOUNDED STICKY HERO (300vh wrapper with a 100svh sticky viewport)
-  // Region A: Scene 1 (0.00 -> 0.36)
-  // Region B: Scene 2 Locked Plateau (0.36 -> 0.70, absolute plateau 0.46 -> 0.70)
-  // Region C: Exit to next section (0.70 -> 1.00)
+  // ONE BOUNDED STICKY HERO SEQUENCE (380vh wrapper with a 100svh sticky viewport)
+  // Region A: Scene 1 ("Knowledge has gravity.", 0.00 -> 0.28)
+  // Region B: Scene 2 ("Your syllabus, made visible.", locked plateau 0.36 -> 0.54)
+  // Transition Bridge: Scene 2 -> Scene 3 (0.54 -> 0.92, normalized t = 0 -> 1)
+  // Region C: Scene 3 Settled State (0.92 -> 1.00, unmodified resting frame)
   // =========================================================================
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -39,38 +44,68 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
 
   // 1. Black Hole Shader Transforms
   // In Scene 2, the black hole recedes to a faint background ghost (0.10 opacity)
-  const blackHoleIntensity = useTransform(scrollYProgress, [0, 0.22, 0.38, 0.46, 0.70, 0.86], [1.0, 1.0, 0.50, 0.18, 0.18, 0])
-  const blackHoleOpacity = useTransform(scrollYProgress, [0, 0.22, 0.38, 0.46, 0.70, 0.86], [1.0, 1.0, 0.40, 0.10, 0.10, 0])
-  const blackHoleScale = useTransform(scrollYProgress, [0, 0.38, 0.46, 0.70, 0.86], [1.0, 0.96, 0.92, 0.92, 0.88])
-  const blackHoleX = useTransform(scrollYProgress, [0, 0.38, 0.46, 0.70, 0.86], ['0vw', '1.5vw', '2vw', '2vw', '3vw'])
+  const blackHoleIntensity = useTransform(scrollYProgress, [0, 0.18, 0.28, 0.36, 0.54, 0.65], [1.0, 1.0, 0.50, 0.18, 0.18, 0])
+  const blackHoleOpacity = useTransform(scrollYProgress, [0, 0.18, 0.28, 0.36, 0.54, 0.65], [1.0, 1.0, 0.40, 0.10, 0.10, 0])
+  const blackHoleScale = useTransform(scrollYProgress, [0, 0.28, 0.36, 0.54, 0.65], [1.0, 0.96, 0.92, 0.92, 0.88])
+  const blackHoleX = useTransform(scrollYProgress, [0, 0.28, 0.36, 0.54, 0.65], ['0vw', '1.5vw', '2vw', '2vw', '3vw'])
 
-  // 2. SCENE 1: "Knowledge has gravity." (0.00 -> 0.22 hold, 0.22 -> 0.38 exit)
-  // At >= 0.38, visibility is strictly hidden to guarantee zero ghost text!
-  const scene1Opacity = useTransform(scrollYProgress, [0.22, 0.38], [1, 0])
-  const scene1Y = useTransform(scrollYProgress, [0.22, 0.38], [0, -24])
-  const scene1Blur = useTransform(scrollYProgress, [0.22, 0.38], ['blur(0px)', 'blur(6px)'])
-  const scene1Visibility = useTransform(scrollYProgress, (v) => (v < 0.38 ? 'visible' : 'hidden'))
+  // 2. SCENE 1: "Knowledge has gravity." (0.00 -> 0.18 hold, 0.18 -> 0.28 exit)
+  // At >= 0.28, visibility is strictly hidden to guarantee zero ghost text!
+  const scene1Opacity = useTransform(scrollYProgress, [0.18, 0.28], [1, 0])
+  const scene1Y = useTransform(scrollYProgress, [0.18, 0.28], [0, -24])
+  const scene1Blur = useTransform(scrollYProgress, [0.18, 0.28], ['blur(0px)', 'blur(6px)'])
+  const scene1Visibility = useTransform(scrollYProgress, (v) => (v < 0.28 ? 'visible' : 'hidden'))
 
-  // 3. SCENE 2: "Your syllabus, made visible." (0.38 -> 0.46 assemble, 0.46 -> 0.70 LOCKED PLATEAU, 0.70 -> 0.86 exit)
-  const scene2Opacity = useTransform(scrollYProgress, [0.38, 0.46, 0.70, 0.86], [0, 1, 1, 0])
-  const scene2Y = useTransform(scrollYProgress, [0.38, 0.46, 0.70, 0.86], [20, 0, 0, -20])
-  const scene2Blur = useTransform(scrollYProgress, [0.38, 0.46, 0.70, 0.86], ['blur(6px)', 'blur(0px)', 'blur(0px)', 'blur(6px)'])
-  const scene2Visibility = useTransform(scrollYProgress, (v) => (v >= 0.36 && v <= 0.88 ? 'visible' : 'hidden'))
+  // 3. SCENE 2 -> SCENE 3 TRANSITION PROGRESS (Deterministic 0.0 -> 1.0 scrubbed by scroll)
+  // 0.00 -> 0.15: Scene 2 resting frame
+  // 0.15 -> 0.32: Scene 2 prepares (UI dims, constellation focuses)
+  // 0.32 -> 0.48: Constellation contracts toward central source node
+  // 0.48 -> 0.62: Light trace transformation & camera dive through node
+  // 0.62 -> 0.74: The transition void (short cinematic moment with thin data streaks)
+  // 0.70 -> 0.84: Trails reorganize toward Scene 3 headline & product dock
+  // 0.76 -> 0.94: Scene 3 revealed
+  // 0.94 -> 1.00: Scene 3 settles
+  const transitionProgress = useTransform(scrollYProgress, [0.54, 0.92], [0, 1])
 
-  // 4. EXIT TO NEXT WEBSITE SECTION (0.86 -> 1.00)
-  const stageOpacity = useTransform(scrollYProgress, [0.86, 0.98], [1, 0])
-  const stageY = useTransform(scrollYProgress, [0.86, 0.98], [0, -20])
+  // Scene 2 Headline: fades cleanly during transition (0.58 -> 0.72)
+  const scene2HeadlineOpacity = useTransform(
+    scrollYProgress,
+    [0.28, 0.36, 0.54, 0.60, 0.70],
+    [0, 1, 1, 0.65, 0]
+  )
+  const scene2HeadlineY = useTransform(scrollYProgress, [0.28, 0.36, 0.60, 0.70], [20, 0, 0, -16])
+  const scene2HeadlineBlur = useTransform(
+    scrollYProgress,
+    [0.28, 0.36, 0.60, 0.70],
+    ['blur(6px)', 'blur(0px)', 'blur(0px)', 'blur(6px)']
+  )
+  const scene2HeadlineVisibility = useTransform(scrollYProgress, (v) => (v >= 0.26 && v <= 0.72 ? 'visible' : 'hidden'))
 
-  // Initial Scroll Indicator (0.00 -> 0.14)
-  const scrollIndicatorOpacity = useTransform(scrollYProgress, [0, 0.14], [1, 0])
+  // Scene 2 Supporting Copy & Action Buttons: fades at start of transition (0.54 -> 0.64)
+  const scene2UiOpacity = useTransform(
+    scrollYProgress,
+    [0.28, 0.36, 0.54, 0.62],
+    [0, 1, 1, 0]
+  )
+  const scene2UiY = useTransform(scrollYProgress, [0.28, 0.36, 0.54, 0.62], [20, 0, 0, -8])
+  const scene2UiVisibility = useTransform(scrollYProgress, (v) => (v >= 0.26 && v <= 0.64 ? 'visible' : 'hidden'))
+
+  // 4. SCENE 3: "Turn your syllabus into a constellation."
+  // Reveals cleanly between 0.80 and 0.90 (t = 0.76 to 0.94), fully settled at >= 0.90 (t = 0.94+)
+  const scene3Opacity = useTransform(scrollYProgress, [0.78, 0.88], [0, 1])
+  const scene3Scale = useTransform(scrollYProgress, [0.78, 0.88], [0.97, 1.0])
+  const scene3Visibility = useTransform(scrollYProgress, (v) => (v >= 0.76 ? 'visible' : 'hidden'))
+
+  // Initial Scroll Indicator (0.00 -> 0.12)
+  const scrollIndicatorOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0])
 
   // Singularity center point for atmospheric layers
   const bhCenter: [number, number] = isMobile ? [0.50, 0.62] : [0.70, 0.48]
 
   // =========================================================================
-  // LOCALIZED SOFT SETTLE INTO SCENE 2 ANCHOR (at progress ~ 0.50)
-  // Fires only after idle delay (~140ms) when stopped in transition window [0.36, 0.52].
-  // Never hijacks active scrolling. Smooth reverse scrolling and continuation work seamlessly.
+  // LOCALIZED SOFT SETTLE INTO SCENE 2 ANCHOR (at progress ~ 0.46)
+  // Fires only after idle delay (~140ms) when stopped in entrance window [0.30, 0.46].
+  // Never hijacks active scrolling. Transition to Scene 3 is purely scroll-scrubbed.
   // =========================================================================
   useEffect(() => {
     if (prefersReduced) return
@@ -94,12 +129,11 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
       const isScrollingDown = scrollY >= lastScrollY
       lastScrollY = scrollY
 
-      // When stopped near the Scene 2 transition [0.36, 0.52] and not already settled at 0.50
-      if (currentP >= 0.36 && currentP <= 0.52 && Math.abs(currentP - 0.50) > 0.035) {
-        // If user was scrolling upwards back to Scene 1, do not drag them down
-        if (!isScrollingDown && currentP < 0.42) return
+      // When stopped near the Scene 2 entrance window [0.30, 0.46] and not yet at anchor 0.46
+      if (currentP >= 0.30 && currentP <= 0.46 && Math.abs(currentP - 0.46) > 0.035) {
+        if (!isScrollingDown && currentP < 0.34) return
 
-        const targetScrollY = Math.round(containerTop + 0.50 * maxScroll)
+        const targetScrollY = Math.round(containerTop + 0.46 * maxScroll)
         isSettling = true
 
         window.scrollTo({
@@ -142,10 +176,10 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
   return (
     <section
       ref={containerRef}
-      className="relative w-full h-[300vh] bg-[#020304] text-[#F5F5F2] select-none"
+      className="relative w-full h-[380vh] bg-[#020304] text-[#F5F5F2] select-none"
     >
       {/* Sticky 100svh Viewport Container */}
-      <motion.div
+      <div
         onPointerMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect()
           mouseRef.current.x = e.clientX - rect.left
@@ -156,10 +190,6 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
           mouseRef.current.active = false
           mouseRef.current.x = -9999
           mouseRef.current.y = -9999
-        }}
-        style={{
-          opacity: stageOpacity,
-          y: prefersReduced ? 0 : stageY,
         }}
         className="sticky top-0 h-[100svh] w-full overflow-hidden flex flex-col justify-between"
       >
@@ -202,21 +232,22 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
 
         {/* ============================================================ */}
         {/* LAYER 3: SCENE 2 CENTERED CONSTELLATION CANVAS               */}
-        {/* Centered at 50vw, 50vh with Curated Nodes + Aether Ambience  */}
+        {/* Responds to scroll: contracts inward and dives past camera   */}
         {/* ============================================================ */}
         <div className="absolute inset-0 z-20 pointer-events-auto">
           <KnowledgeConstellationCanvas
             progress={scrollYProgress}
+            transitionProgress={transitionProgress}
             className="w-full h-full"
             onNodeSelect={(_nodeId) => {
-              // Node select sound already played; preserves interactive responsiveness
+              // Interactive audio feedback handled in engine
             }}
           />
         </div>
 
         {/* ============================================================ */}
-        {/* LAYER 4: SCENE 1 ("Knowledge has gravity.") (0.00 -> 0.38)   */}
-        {/* 100% GONE at 0.38: visibility: hidden, zero ghost text!      */}
+        {/* LAYER 4: SCENE 1 ("Knowledge has gravity.") (0.00 -> 0.28)   */}
+        {/* 100% GONE at 0.28: visibility: hidden, zero ghost text!      */}
         {/* ============================================================ */}
         <motion.div
           style={{
@@ -282,7 +313,7 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
               </LiquidButton>
 
               <a
-                href="#syllabus-reveal"
+                href="#hero"
                 onClick={() => soundEngine.playHover()}
                 className="font-mono text-xs tracking-wider uppercase text-white/40 hover:text-white/80 transition-colors cursor-pointer hidden sm:inline"
               >
@@ -294,20 +325,19 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
 
         {/* ============================================================ */}
         {/* LAYER 5: SCENE 2 ("Your syllabus, made visible.")            */}
-        {/* Enters at 0.38, LOCKED PLATEAU 0.46 -> 0.70, Exits at 0.86  */}
-        {/* Framed top & bottom around the centered 50vw/50vh canvas     */}
+        {/* Locked plateau 0.36 -> 0.54, cleanly leaves in transition    */}
         {/* ============================================================ */}
-        <motion.div
-          style={{
-            opacity: scene2Opacity,
-            y: prefersReduced ? 0 : scene2Y,
-            filter: scene2Blur,
-            visibility: scene2Visibility as any,
-          }}
-          className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-between p-6 sm:p-10 md:py-12 md:px-16"
-        >
+        <div className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-between p-6 sm:p-10 md:py-12 md:px-16">
           {/* Top Header: Eyebrow + Headline + Supporting Sentence */}
-          <div className="w-full max-w-[720px] mx-auto text-center mt-2 sm:mt-4">
+          <motion.div
+            style={{
+              opacity: scene2HeadlineOpacity,
+              y: prefersReduced ? 0 : scene2HeadlineY,
+              filter: scene2HeadlineBlur,
+              visibility: scene2HeadlineVisibility as any,
+            }}
+            className="w-full max-w-[720px] mx-auto text-center mt-2 sm:mt-4"
+          >
             <div className="font-mono text-[10px] sm:text-[11px] tracking-[0.25em] text-[#69DDF5]/85 uppercase mb-3 sm:mb-4">
               STRUCTURE REVEALED / KNOWLEDGE SYSTEM
             </div>
@@ -329,10 +359,17 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
             <p className="font-sans text-[14px] sm:text-[16px] text-[rgba(245,245,242,0.65)] max-w-[540px] mx-auto font-normal leading-relaxed text-balance">
               GuruKul maps what you need to learn, shows how everything connects, and makes every answer traceable to its source.
             </p>
-          </div>
+          </motion.div>
 
           {/* Bottom Action Bar */}
-          <div className="w-full flex items-center justify-center gap-6 mb-2 sm:mb-4">
+          <motion.div
+            style={{
+              opacity: scene2UiOpacity,
+              y: prefersReduced ? 0 : scene2UiY,
+              visibility: scene2UiVisibility as any,
+            }}
+            className="w-full flex items-center justify-center gap-6 mb-2 sm:mb-4"
+          >
             <div className="pointer-events-auto">
               <LiquidButton
                 onClick={() => {
@@ -347,18 +384,41 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
             </div>
 
             <a
-              href="#syllabus-reveal"
+              href="#hero"
               onClick={() => soundEngine.playHover()}
               className="pointer-events-auto font-mono text-xs tracking-wider uppercase text-white/40 hover:text-white/80 transition-colors cursor-pointer hidden sm:flex items-center"
             >
               <Compass className="w-3.5 h-3.5 inline-block mr-1.5 text-[#69DDF5]" />
               How it works
             </a>
-          </div>
+          </motion.div>
+        </div>
+
+        {/* ============================================================ */}
+        {/* LAYER 6: SCENE TRANSITION BRIDGE (Signature Light Trails)    */}
+        {/* Active only during t in [0.46, 0.88] (dive, void, reorg)     */}
+        {/* ============================================================ */}
+        <div className="absolute inset-0 z-35 pointer-events-none">
+          <SceneTransitionBridge progress={transitionProgress} />
+        </div>
+
+        {/* ============================================================ */}
+        {/* LAYER 7: SCENE 3 ("Turn your syllabus into a constellation") */}
+        {/* Clean reveal at t in [0.76, 0.94], settles into resting state*/}
+        {/* ============================================================ */}
+        <motion.div
+          style={{
+            opacity: scene3Opacity,
+            scale: prefersReduced ? 1 : scene3Scale,
+            visibility: scene3Visibility as any,
+          }}
+          className="absolute inset-0 z-40 w-full h-full overflow-hidden pointer-events-auto"
+        >
+          {children || <HeroConstellation onOpenUploadModal={onOpenUploadModal} />}
         </motion.div>
 
         {/* ============================================================ */}
-        {/* LAYER 6: TINY SCROLL INDICATOR (Bottom Viewport 1)           */}
+        {/* LAYER 8: SCENE 1 SCROLL INDICATOR (Bottom Viewport 1)        */}
         {/* ============================================================ */}
         <motion.div
           style={{ opacity: scrollIndicatorOpacity }}
@@ -370,7 +430,7 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
           </span>
         </motion.div>
 
-      </motion.div>
+      </div>
     </section>
   )
 }

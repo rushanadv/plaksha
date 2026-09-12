@@ -5,6 +5,8 @@ import { soundEngine } from '../../lib/audio-engine'
 export interface KnowledgeConstellationCanvasProps {
   /** Master hero scroll progress (0.0 to 1.0), MotionValue or static number */
   progress: MotionValue<number> | number
+  /** Transition progress to Scene 3 (0.0 to 1.0) */
+  transitionProgress?: MotionValue<number> | number
   /** Optional container class */
   className?: string
   /** Optional callback when a node is selected */
@@ -36,7 +38,7 @@ interface AmbientParticle {
 // 1. CURATED ACADEMIC KNOWLEDGE NODES (Centered Diamond / Hexagonal Cluster)
 // Mathematically balanced center of mass: mean(nx) ≈ 0.50, mean(ny) ≈ 0.50
 const ACADEMIC_NODES: AcademicNode[] = [
-  // Central Major Node / Visual Anchor
+  // Central Major Node / Visual Anchor (Source node for camera dive)
   { id: 'calculus', label: 'CALCULUS', category: 'CORE HUB', nx: 0.50, ny: 0.49, size: 7.0, isAnchorDefault: true, isCore: true, phase: 1 },
 
   // Top-Left Cluster (Foundations)
@@ -86,20 +88,22 @@ const SEMANTIC_EDGES: [string, string][] = [
 
 export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvasProps> = ({
   progress,
+  transitionProgress,
   className = '',
   onNodeSelect,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   
-  const getInitialProgress = () => {
-    if (typeof progress === 'number') return progress
-    if (progress && typeof progress.get === 'function') return progress.get()
+  const getInitialProgress = (val?: MotionValue<number> | number) => {
+    if (typeof val === 'number') return val
+    if (val && typeof val.get === 'function') return val.get()
     return 0
   }
 
-  const progressRef = useRef<number>(getInitialProgress())
+  const progressRef = useRef<number>(getInitialProgress(progress))
+  const transitionRef = useRef<number>(getInitialProgress(transitionProgress))
 
-  // Subscribe to MotionValue changes without triggering React re-renders
+  // Subscribe to master scroll progress without triggering React re-renders
   useEffect(() => {
     if (typeof progress === 'number') {
       progressRef.current = progress
@@ -112,6 +116,20 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
       return () => unsubscribe()
     }
   }, [progress])
+
+  // Subscribe to Scene 2 -> 3 transition progress
+  useEffect(() => {
+    if (typeof transitionProgress === 'number') {
+      transitionRef.current = transitionProgress
+      return
+    }
+    if (transitionProgress && typeof transitionProgress.on === 'function') {
+      const unsubscribe = transitionProgress.on('change', (latest: number) => {
+        transitionRef.current = latest
+      })
+      return () => unsubscribe()
+    }
+  }, [transitionProgress])
 
   const hoveredNodeIdRef = useRef<string | null>(null)
   const mousePosRef = useRef<{ x: number; y: number; active: boolean }>({ x: -9999, y: -9999, active: false })
@@ -244,50 +262,67 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
       lastTime = now
 
       const p = progressRef.current
+      const t = transitionRef.current
 
-      // =====================================================================
-      // COMPUTE SCENE 2 VISUAL REGIONS & HOLD PLATEAU
-      // 0.00 -> 0.22: Dormant (sceneAlpha = 0)
-      // 0.22 -> 0.38: Transformation emergence (sceneAlpha 0 -> 0.40)
-      // 0.38 -> 0.46: Assembly into curated positions (sceneAlpha 0.40 -> 1.0)
-      // 0.46 -> 0.70: LOCKED HOLD STATE (sceneAlpha = 1.0, NO scale/pos drift!)
-      // 0.70 -> 0.86: Exit transition (sceneAlpha 1.0 -> 0.0)
-      // 0.86 -> 1.00: Completely dissolved (sceneAlpha = 0)
-      // =====================================================================
       let sceneAlpha = 0
       let assembleRatio = 0
       let exitScale = 1.0
+      let contractRatio = 0
 
-      if (p < 0.22) {
+      // Compute entrance / assembly from master progress
+      if (p < 0.20) {
         sceneAlpha = 0
         assembleRatio = 0
+      } else if (p < 0.30) {
+        const ratio = (p - 0.20) / (0.30 - 0.20)
+        sceneAlpha = ratio * 0.40
+        assembleRatio = ratio * 0.35
       } else if (p < 0.38) {
-        // Transformation begins
-        const t = (p - 0.22) / (0.38 - 0.22)
-        sceneAlpha = t * 0.40
-        assembleRatio = t * 0.35
-      } else if (p < 0.46) {
-        // Rapid clean assembly
-        const t = (p - 0.38) / (0.46 - 0.38)
-        sceneAlpha = 0.40 + t * 0.60
-        assembleRatio = 0.35 + t * 0.65
-      } else if (p <= 0.70) {
-        // ===================================================================
-        // TRUE LOCKED / SETTLED PLATEAU
-        // No scale, no position shift, no opacity fluctuation!
-        // ===================================================================
+        const ratio = (p - 0.30) / (0.38 - 0.30)
+        sceneAlpha = 0.40 + ratio * 0.60
+        assembleRatio = 0.35 + ratio * 0.65
+      } else {
+        // Locked Plateau reached
         sceneAlpha = 1.0
         assembleRatio = 1.0
         exitScale = 1.0
-      } else if (p < 0.86) {
-        // Gentle exit expansion & fade
-        const t = (p - 0.70) / (0.86 - 0.70)
-        sceneAlpha = 1.0 - t
-        assembleRatio = 1.0
-        exitScale = 1.0 + t * 0.06
-      } else {
-        sceneAlpha = 0
-        assembleRatio = 1.0
+        contractRatio = 0
+      }
+
+      // If transition to Scene 3 is active, apply exact user-specified timeline
+      if (t > 0) {
+        if (t <= 0.15) {
+          // 0.00 -> 0.15: Scene 2 Resting Frame (stable hold)
+          sceneAlpha = 1.0
+          assembleRatio = 1.0
+          exitScale = 1.0
+          contractRatio = 0
+        } else if (t <= 0.32) {
+          // 0.15 -> 0.32: Scene 2 prepares, constellation focuses (scale 1 -> 1.04)
+          const subT = (t - 0.15) / (0.32 - 0.15)
+          sceneAlpha = 1.0
+          assembleRatio = 1.0
+          exitScale = 1.0 + subT * 0.04
+          contractRatio = 0
+        } else if (t <= 0.48) {
+          // 0.32 -> 0.48: Constellation contracts toward central node (calculus)
+          const subT = (t - 0.32) / (0.48 - 0.32)
+          sceneAlpha = 1.0
+          assembleRatio = 1.0
+          exitScale = 1.04
+          contractRatio = subT
+        } else if (t <= 0.66) {
+          // 0.48 -> 0.66: Camera dive through central node (scale 1.04 -> 2.6, opacity 1 -> 0)
+          const subT = (t - 0.48) / (0.66 - 0.48)
+          sceneAlpha = Math.max(0, 1.0 - subT)
+          assembleRatio = 1.0
+          exitScale = 1.04 + subT * 1.56
+          contractRatio = 1.0
+        } else {
+          // Passed through central node into transition bridge & Scene 3
+          sceneAlpha = 0
+          contractRatio = 1.0
+        }
       }
 
       // Clear viewport
@@ -310,16 +345,16 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
 
       // Determine active connected neighbors when a node is hovered
       const activeNeighborSet = new Set<string>()
-      if (hoveredId) {
+      if (hoveredId && t < 0.25) {
         activeNeighborSet.add(hoveredId)
-        for (const [s, t] of SEMANTIC_EDGES) {
-          if (s === hoveredId) activeNeighborSet.add(t)
-          if (t === hoveredId) activeNeighborSet.add(s)
+        for (const [s, tNode] of SEMANTIC_EDGES) {
+          if (s === hoveredId) activeNeighborSet.add(tNode)
+          if (tNode === hoveredId) activeNeighborSet.add(s)
         }
       }
 
       // ---------------------------------------------------------------------
-      // 1. UPDATE ACADEMIC NODE POSITIONS (Art-directed centered coordinates)
+      // 1. UPDATE ACADEMIC NODE POSITIONS (With inward contraction during transition)
       // ---------------------------------------------------------------------
       for (const node of ACADEMIC_NODES) {
         let state = nodeStateMap.get(node.id)
@@ -338,9 +373,12 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
           nodeStateMap.set(node.id, state)
         }
 
-        // Target centered screen coordinates
-        const targetX = cx + (node.nx - 0.5) * boxW
-        const targetY = cy + (node.ny - 0.5) * boxH
+        // Target centered screen coordinates, contracted toward (0.50, 0.49) if contractRatio > 0
+        const normX = node.isCore ? 0.50 : node.nx + (0.50 - node.nx) * contractRatio * 0.90
+        const normY = node.isCore ? 0.49 : node.ny + (0.49 - node.ny) * contractRatio * 0.90
+
+        const targetX = cx + (normX - 0.5) * boxW
+        const targetY = cy + (normY - 0.5) * boxH
         state.baseX = targetX
         state.baseY = targetY
 
@@ -348,10 +386,10 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
         const currentTargetX = cx + (targetX - cx) * assembleRatio
         const currentTargetY = cy + (targetY - cy) * assembleRatio
 
-        // Subtle micro-repulsion from mouse (max 3px so text remains rock-solid)
+        // Micro-repulsion from mouse (active only during resting state t < 0.20)
         let repelX = 0
         let repelY = 0
-        if (mouse.active) {
+        if (mouse.active && t < 0.20) {
           const dx = currentTargetX - mouse.x
           const dy = currentTargetY - mouse.y
           const d2 = dx * dx + dy * dy
@@ -364,41 +402,40 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
           }
         }
 
-        // Smooth spring towards target + repel
-        state.x += (currentTargetX + repelX - state.x) * 0.16
-        state.y += (currentTargetY + repelY - state.y) * 0.16
+        // Smooth spring towards target
+        state.x += (currentTargetX + repelX - state.x) * 0.18
+        state.y += (currentTargetY + repelY - state.y) * 0.18
         state.pulsePhase += dt * 1.8
 
-        // Hover alpha interpolation
-        const isHovered = node.id === hoveredId
-        const isNeighbor = activeNeighborSet.has(node.id)
-        const targetHoverAlpha = isHovered ? 1.0 : isNeighbor ? 0.6 : hoveredId ? -0.4 : 0
+        const isHovered = node.id === hoveredId && t < 0.25
+        const isNeighbor = activeNeighborSet.has(node.id) && t < 0.25
+        const targetHoverAlpha = isHovered ? 1.0 : isNeighbor ? 0.6 : hoveredId && t < 0.25 ? -0.4 : 0
         state.hoverAlpha += (targetHoverAlpha - state.hoverAlpha) * 0.18
       }
 
       // ---------------------------------------------------------------------
-      // 2. UPDATE & DRAW AMBIENT PARTICLES (The refined Aether Flow network)
+      // 2. UPDATE & DRAW AMBIENT PARTICLES
       // ---------------------------------------------------------------------
       const ambientConnectDist = isMobile ? 48 : 74
       const ambientConnectDistSq = ambientConnectDist * ambientConnectDist
       const connectionCounts = new Uint8Array(ambientParticles.length)
 
+      // Ambient particles dim slightly during transition
+      const ambientDimMultiplier = t > 0.15 ? Math.max(0, 1.0 - (t - 0.15) * 2.2) : 1.0
+
       for (let i = 0; i < ambientParticles.length; i++) {
         const p1 = ambientParticles[i]
 
-        // Organic Brownian motion
         p1.x += p1.vx
         p1.y += p1.vy
 
-        // Soft screen bounce/wrap
         const margin = 20
         if (p1.x < margin) { p1.x = margin; p1.vx *= -1 }
         if (p1.x > width - margin) { p1.x = width - margin; p1.vx *= -1 }
         if (p1.y < margin) { p1.y = margin; p1.vy *= -1 }
         if (p1.y > height - margin) { p1.y = height - margin; p1.vy *= -1 }
 
-        // Mouse repulsion
-        if (mouse.active) {
+        if (mouse.active && t < 0.20) {
           const dx = p1.x - mouse.x
           const dy = p1.y - mouse.y
           const d2 = dx * dx + dy * dy
@@ -411,14 +448,14 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
           }
         }
 
-        // Draw ambient particle dot
-        const dotAlpha = p1.baseOpacity * sceneAlpha * (hoveredId ? 0.45 : 0.85)
-        ctx.beginPath()
-        ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(142, 223, 242, ${dotAlpha})`
-        ctx.fill()
+        const dotAlpha = p1.baseOpacity * sceneAlpha * ambientDimMultiplier * (hoveredId ? 0.45 : 0.85)
+        if (dotAlpha > 0.01) {
+          ctx.beginPath()
+          ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(142, 223, 242, ${dotAlpha})`
+          ctx.fill()
+        }
 
-        // Draw ambient connections (max 2 neighbors per particle to prevent spiderweb)
         for (let j = i + 1; j < ambientParticles.length; j++) {
           if (connectionCounts[i] >= 2 || connectionCounts[j] >= 2) continue
           const p2 = ambientParticles[j]
@@ -430,68 +467,78 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
             connectionCounts[i]++
             connectionCounts[j]++
             const dist = Math.sqrt(d2)
-            const edgeAlpha = (1 - dist / ambientConnectDist) * 0.16 * sceneAlpha * (hoveredId ? 0.35 : 1.0)
-            ctx.beginPath()
-            ctx.moveTo(p1.x, p1.y)
-            ctx.lineTo(p2.x, p2.y)
-            ctx.strokeStyle = `rgba(100, 210, 235, ${edgeAlpha})`
-            ctx.lineWidth = 0.65
-            ctx.stroke()
+            const edgeAlpha = (1 - dist / ambientConnectDist) * 0.16 * sceneAlpha * ambientDimMultiplier
+            if (edgeAlpha > 0.01) {
+              ctx.beginPath()
+              ctx.moveTo(p1.x, p1.y)
+              ctx.lineTo(p2.x, p2.y)
+              ctx.strokeStyle = `rgba(100, 210, 235, ${edgeAlpha})`
+              ctx.lineWidth = 0.65
+              ctx.stroke()
+            }
           }
         }
       }
 
       // ---------------------------------------------------------------------
-      // 3. DRAW CURATED SEMANTIC CONNECTIONS (Academic conceptual edges)
+      // 3. DRAW CURATED SEMANTIC CONNECTIONS
+      // Lines shorten and brighten as contraction progresses
       // ---------------------------------------------------------------------
       for (const [sourceId, targetId] of SEMANTIC_EDGES) {
         const sState = nodeStateMap.get(sourceId)
         const tState = nodeStateMap.get(targetId)
         if (!sState || !tState) continue
 
-        const isEdgeHovered = hoveredId && (sourceId === hoveredId || targetId === hoveredId)
-        const isDimmed = hoveredId && !isEdgeHovered
+        const isEdgeHovered = hoveredId && (sourceId === hoveredId || targetId === hoveredId) && t < 0.25
+        const isDimmed = hoveredId && !isEdgeHovered && t < 0.25
+
+        // Brighten connections as nodes contract (0.32 -> 0.48)
+        const contractBrighten = contractRatio * 0.35
 
         let edgeAlpha = isEdgeHovered
           ? 0.75 * sceneAlpha
           : isDimmed
           ? 0.08 * sceneAlpha
-          : 0.24 * sceneAlpha
+          : (0.24 + contractBrighten) * sceneAlpha
 
         ctx.beginPath()
         ctx.moveTo(sState.x, sState.y)
         ctx.lineTo(tState.x, tState.y)
 
         if (isEdgeHovered) {
-          // Highlighted active edge glow
           ctx.strokeStyle = `rgba(175, 240, 255, ${edgeAlpha})`
           ctx.lineWidth = 1.6
           ctx.stroke()
         } else {
           ctx.strokeStyle = `rgba(100, 210, 235, ${edgeAlpha})`
-          ctx.lineWidth = 1.0
+          ctx.lineWidth = 1.0 + contractRatio * 0.6
           ctx.stroke()
         }
       }
 
       // ---------------------------------------------------------------------
       // 4. DRAW CURATED ACADEMIC NODES & LABELS
+      // Central node scales up (1 -> 1.45) with intensified cyan glow
+      // Outer nodes dim slightly as they converge
       // ---------------------------------------------------------------------
       for (const node of ACADEMIC_NODES) {
         const state = nodeStateMap.get(node.id)
         if (!state) continue
 
-        const isHovered = node.id === hoveredId
-        const isNeighbor = activeNeighborSet.has(node.id)
-        const isDimmed = hoveredId && !isHovered && !isNeighbor
+        const isHovered = node.id === hoveredId && t < 0.25
+        const isNeighbor = activeNeighborSet.has(node.id) && t < 0.25
+        const isDimmed = (hoveredId && !isHovered && !isNeighbor && t < 0.25) || (!node.isCore && contractRatio > 0.4)
 
-        const currentScale = isHovered ? 1.18 : 1.0
+        // Central source node scales 1 -> 1.45; outer nodes soften slightly
+        const focalScale = node.isCore ? 1.0 + contractRatio * 0.45 : Math.max(0.7, 1.0 - contractRatio * 0.25)
+        const currentScale = (isHovered ? 1.18 : 1.0) * focalScale
         const r = node.size * currentScale
 
         // A. Outer Glow / Pulse Ring
         if (node.isCore || isHovered) {
-          const pulseR = r + (isHovered ? 6 : 3 + Math.sin(state.pulsePhase) * 1.5)
-          const glowAlpha = (isHovered ? 0.45 : 0.18) * sceneAlpha
+          const extraCorePulse = node.isCore ? contractRatio * 8 : 0
+          const pulseR = r + (isHovered ? 6 : 3 + Math.sin(state.pulsePhase) * 1.5) + extraCorePulse
+          const glowAlpha = ((isHovered ? 0.45 : 0.18) + (node.isCore ? contractRatio * 0.4 : 0)) * sceneAlpha
           ctx.beginPath()
           ctx.arc(state.x, state.y, pulseR, 0, Math.PI * 2)
           ctx.fillStyle = `rgba(105, 221, 245, ${glowAlpha})`
@@ -521,18 +568,17 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
           ctx.fill()
         }
 
-        // C. Clean Monospace Labels
-        const showLabel = node.isAnchorDefault || isHovered || isNeighbor
+        // C. Clean Monospace Labels (fade out as contraction starts t >= 0.28)
+        const labelFade = t > 0.25 ? Math.max(0, 1.0 - (t - 0.25) * 8) : 1.0
+        const showLabel = (node.isAnchorDefault || isHovered || isNeighbor) && labelFade > 0.05
         if (showLabel && assembleRatio > 0.45) {
-          const labelAlpha = (isHovered ? 1.0 : isNeighbor ? 0.85 : isDimmed ? 0.35 : 0.78) * sceneAlpha
+          const labelAlpha = (isHovered ? 1.0 : isNeighbor ? 0.85 : isDimmed ? 0.35 : 0.78) * sceneAlpha * labelFade
           const labelY = state.y + r + (isMobile ? 12 : 14)
 
           ctx.save()
           ctx.font = isMobile ? '500 9.5px monospace' : '500 11px monospace'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-
-          // Text shadow for high legibility
           ctx.shadowColor = 'rgba(2, 3, 4, 0.95)'
           ctx.shadowBlur = 6
 
@@ -544,7 +590,6 @@ export const KnowledgeConstellationCanvas: React.FC<KnowledgeConstellationCanvas
 
           ctx.fillText(node.label, state.x, labelY)
 
-          // Subtitle category on hover
           if (isHovered && !isMobile) {
             ctx.font = '500 8px monospace'
             ctx.fillStyle = 'rgba(142, 223, 242, 0.65)'
