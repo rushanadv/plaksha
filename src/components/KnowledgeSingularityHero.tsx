@@ -24,37 +24,36 @@ interface ConstellationNode {
 // Strictly curated academic nodes with Art-Directed Exclusion Zone
 // Protected Left Editorial Zone (x: 0..48, y: 22..68) has ZERO nodes
 const CONSTELLATION_NODES: ConstellationNode[] = [
-  // Phase 1 Foundational Nodes (Emerges 38%-52% scroll in pure transformation pause)
-  { id: 'functions', label: 'Functions', category: 'CALCULUS', x: 52, y: 36, size: 4.5, isAnchorDefault: true, phase: 1 },
-  { id: 'limits', label: 'Limits', category: 'CALCULUS', x: 63, y: 30, size: 5.0, isAnchorDefault: true, phase: 1 },
-  { id: 'derivatives', label: 'Derivatives', category: 'CALCULUS', x: 75, y: 36, size: 5.5, isAnchorDefault: true, phase: 1 },
+  // Phase 1 Foundational Core Nodes (Emerge in Transformation pause 38%-56% scroll)
+  { id: 'functions', label: 'Functions', category: 'CALCULUS', x: 56, y: 38, size: 4.8, isAnchorDefault: true, phase: 1 },
+  { id: 'limits', label: 'Limits', category: 'CALCULUS', x: 65, y: 30, size: 5.0, isAnchorDefault: true, phase: 1 },
+  { id: 'derivatives', label: 'Derivatives', category: 'CALCULUS', x: 76, y: 26, size: 5.2, isAnchorDefault: true, phase: 1 },
+  { id: 'vectors', label: 'Vectors', category: 'LINEAR ALGEBRA', x: 80, y: 46, size: 5.0, isAnchorDefault: true, phase: 1 },
+  { id: 'matrices', label: 'Matrices', category: 'LINEAR ALGEBRA', x: 86, y: 58, size: 4.8, isAnchorDefault: true, phase: 1 },
 
-  // Phase 2 Expansion Nodes (Emerges 52%-68% scroll)
-  { id: 'continuity', label: 'Continuity', category: 'CALCULUS', x: 56, y: 46, size: 3.5, isAnchorDefault: false, phase: 2 },
-  { id: 'chain-rule', label: 'Chain Rule', category: 'CALCULUS', x: 84, y: 32, size: 4.0, isAnchorDefault: false, phase: 2 },
-  { id: 'vectors', label: 'Vectors', category: 'LINEAR ALGEBRA', x: 78, y: 52, size: 5.0, isAnchorDefault: true, phase: 2 },
-  { id: 'matrices', label: 'Matrices', category: 'LINEAR ALGEBRA', x: 86, y: 64, size: 4.5, isAnchorDefault: true, phase: 2 },
-  { id: 'eigenvalues', label: 'Eigenvalues', category: 'LINEAR ALGEBRA', x: 74, y: 68, size: 4.0, isAnchorDefault: false, phase: 2 },
-  { id: 'gradient', label: 'Gradient', category: 'CALCULUS', x: 62, y: 60, size: 4.0, isAnchorDefault: false, phase: 2 },
-  { id: 'optimization', label: 'Optimization', category: 'MACHINE LEARNING', x: 68, y: 78, size: 4.5, isAnchorDefault: false, phase: 2 },
-  { id: 'bayes', label: "Bayes' Law", category: 'PROBABILITY', x: 54, y: 82, size: 4.5, isAnchorDefault: true, phase: 2 },
-  { id: 'attention', label: 'Attention', category: 'MACHINE LEARNING', x: 82, y: 84, size: 5.0, isAnchorDefault: true, phase: 2 },
+  // Phase 2 Expansion Nodes (Blossom 56%-78% scroll)
+  { id: 'chain-rule', label: 'Chain Rule', category: 'CALCULUS', x: 86, y: 34, size: 3.8, isAnchorDefault: false, phase: 2 },
+  { id: 'integrals', label: 'Integrals', category: 'CALCULUS', x: 62, y: 50, size: 4.0, isAnchorDefault: false, phase: 2 },
+  { id: 'probability', label: 'Probability', category: 'PROBABILITY', x: 58, y: 66, size: 4.0, isAnchorDefault: false, phase: 2 },
+  { id: 'bayes', label: "Bayes' Law", category: 'PROBABILITY', x: 68, y: 76, size: 4.8, isAnchorDefault: true, phase: 2 },
+  { id: 'attention', label: 'Attention', category: 'MACHINE LEARNING', x: 82, y: 74, size: 5.0, isAnchorDefault: true, phase: 2 },
 ]
 
 const CONSTELLATION_EDGES = [
-  // Phase 1 Edges
+  // Phase 1 Core Connections
   { s: 'functions', t: 'limits', phase: 1 },
   { s: 'limits', t: 'derivatives', phase: 1 },
+  { s: 'derivatives', t: 'vectors', phase: 1 },
+  { s: 'vectors', t: 'matrices', phase: 1 },
 
-  // Phase 2 Edges
-  { s: 'limits', t: 'continuity', phase: 2 },
+  // Phase 2 Expansion Connections
   { s: 'derivatives', t: 'chain-rule', phase: 2 },
-  { s: 'derivatives', t: 'gradient', phase: 2 },
-  { s: 'gradient', t: 'optimization', phase: 2 },
-  { s: 'vectors', t: 'matrices', phase: 2 },
-  { s: 'matrices', t: 'eigenvalues', phase: 2 },
-  { s: 'optimization', t: 'attention', phase: 2 },
+  { s: 'functions', t: 'integrals', phase: 2 },
+  { s: 'integrals', t: 'probability', phase: 2 },
+  { s: 'probability', t: 'bayes', phase: 2 },
+  { s: 'matrices', t: 'attention', phase: 2 },
   { s: 'bayes', t: 'attention', phase: 2 },
+  { s: 'vectors', t: 'attention', phase: 2 },
 ]
 
 export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> = ({
@@ -81,45 +80,48 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
 
   // =========================================================================
   // ARCHITECTURAL SCROLL TIMELINE CHOREOGRAPHY
+  // 0.00 -> 0.22: Scene 1 Opening
+  // 0.22 -> 0.38: Scene 1 Exit (vis: hidden at >= 0.38)
+  // 0.38 -> 0.56: Transformation Pause (particles stream, core nodes appear)
+  // 0.56 -> 0.78: Scene 2 Reveal (secondary nodes blossom, copy enters)
+  // 0.78 -> 0.94: Scene 2 Stable State (clear focus, readable, calm)
+  // 0.94 -> 1.00: Release to Next Section (gentle dissolve to #020304)
   // =========================================================================
 
   // 1. Black Hole Shader Transforms
-  // Slow, heavy, graceful motion without rapid scaling
-  const blackHoleIntensity = useTransform(scrollYProgress, [0, 0.34, 0.70, 0.94], [1, 0.95, 0.50, 0.12])
-  const blackHoleOpacity = useTransform(scrollYProgress, [0, 0.70, 0.94, 1.0], [1, 0.85, 0.35, 0])
-  const blackHoleScale = useTransform(scrollYProgress, [0, 0.50, 0.85, 1.0], [1, 0.98, 0.92, 0.88])
-  const blackHoleX = useTransform(scrollYProgress, [0, 0.50, 0.85], ['0vw', '2vw', '4vw'])
+  const blackHoleIntensity = useTransform(scrollYProgress, [0, 0.38, 0.56, 0.78, 0.94, 1.0], [1.0, 0.95, 0.85, 0.38, 0.20, 0])
+  const blackHoleOpacity = useTransform(scrollYProgress, [0, 0.78, 0.94, 1.0], [1.0, 0.85, 0.35, 0])
+  const blackHoleScale = useTransform(scrollYProgress, [0, 0.38, 0.78, 1.0], [1.0, 0.98, 0.92, 0.88])
+  const blackHoleX = useTransform(scrollYProgress, [0, 0.38, 0.78], ['0vw', '1.5vw', '3vw'])
 
-  // 2. SCENE 1: "Knowledge has gravity." (0.00 -> 0.34)
-  // Fully exits at 0.34. Exactly 0 opacity, visibility hidden to eliminate ghost text!
-  const scene1Opacity = useTransform(scrollYProgress, [0.20, 0.34], [1, 0])
-  const scene1Y = useTransform(scrollYProgress, [0.20, 0.34], [0, -35])
-  const scene1Blur = useTransform(scrollYProgress, [0.20, 0.34], ['blur(0px)', 'blur(8px)'])
-  const scene1Visibility = useTransform(scrollYProgress, (v) => (v < 0.34 ? 'visible' : 'hidden'))
+  // 2. SCENE 1: "Knowledge has gravity." (0.00 -> 0.22 hold, 0.22 -> 0.38 exit)
+  // At >= 0.38, visibility is strictly hidden to guarantee zero ghost text!
+  const scene1Opacity = useTransform(scrollYProgress, [0.22, 0.38], [1, 0])
+  const scene1Y = useTransform(scrollYProgress, [0.22, 0.38], [0, -30])
+  const scene1Blur = useTransform(scrollYProgress, [0.22, 0.38], ['blur(0px)', 'blur(8px)'])
+  const scene1Visibility = useTransform(scrollYProgress, (v) => (v < 0.38 ? 'visible' : 'hidden'))
 
-  // 3. PURE VISUAL TRANSFORMATION (0.34 -> 0.52)
-  // Escaping particles from singularity during pure visual pause
-  const driftParticlesOpacity = useTransform(scrollYProgress, [0.34, 0.43, 0.52], [0, 0.9, 0])
+  // 3. TRANSFORMATION INTERVAL (0.38 -> 0.56)
+  // Escaping particles from singularity center-rightwards during visual pause
+  const driftParticlesOpacity = useTransform(scrollYProgress, [0.38, 0.47, 0.56], [0, 1.0, 0.15])
 
-  // 4. CONSTELLATION EMERGENCE (0.38 -> 0.70)
-  // Phase 1 Foundational (0.38 -> 0.52)
-  const phase1Opacity = useTransform(scrollYProgress, [0.38, 0.52], [0, 1])
-  // Phase 2 Expansion (0.52 -> 0.68)
-  const phase2Opacity = useTransform(scrollYProgress, [0.52, 0.68], [0, 1])
+  // 4. CONSTELLATION EMERGENCE
+  // Phase 1 Foundational Core (0.40 -> 0.54)
+  const phase1Opacity = useTransform(scrollYProgress, [0.40, 0.54], [0, 1])
+  // Phase 2 Expansion (0.58 -> 0.74)
+  const phase2Opacity = useTransform(scrollYProgress, [0.58, 0.74], [0, 1])
 
-  // 5. SCENE 2: "Your syllabus, made visible." (0.68 -> 0.94)
-  // Starts entering ONLY after Scene 1 has been completely gone for 34% scroll!
-  const scene2Opacity = useTransform(scrollYProgress, [0.68, 0.84], [0, 1])
-  const scene2Y = useTransform(scrollYProgress, [0.68, 0.84], [35, 0])
-  const scene2Blur = useTransform(scrollYProgress, [0.68, 0.84], ['blur(8px)', 'blur(0px)'])
-  const scene2Visibility = useTransform(scrollYProgress, (v) => (v >= 0.66 && v <= 0.96 ? 'visible' : 'hidden'))
+  // 5. SCENE 2: "Your syllabus, made visible." (0.58 -> 0.76 reveal, 0.78 -> 0.94 stable)
+  const scene2Opacity = useTransform(scrollYProgress, [0.58, 0.76], [0, 1])
+  const scene2Y = useTransform(scrollYProgress, [0.58, 0.76], [24, 0])
+  const scene2Blur = useTransform(scrollYProgress, [0.58, 0.76], ['blur(8px)', 'blur(0px)'])
+  const scene2Visibility = useTransform(scrollYProgress, (v) => (v >= 0.56 && v <= 0.96 ? 'visible' : 'hidden'))
 
   // 6. EXIT TO WEBSITE (0.94 -> 1.00)
-  // The sticky stage gently dissolves into pure black before next section scrolls in
   const stageOpacity = useTransform(scrollYProgress, [0.94, 1.00], [1, 0])
-  const stageY = useTransform(scrollYProgress, [0.94, 1.00], [0, -30])
+  const stageY = useTransform(scrollYProgress, [0.94, 1.00], [0, -25])
 
-  // Initial Scroll Indicator
+  // Initial Scroll Indicator (0.00 -> 0.14)
   const scrollIndicatorOpacity = useTransform(scrollYProgress, [0, 0.14], [1, 0])
 
   const bhCenter: [number, number] = isMobile ? [0.50, 0.62] : [0.70, 0.48]
@@ -204,12 +206,14 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
               </filter>
             </defs>
 
-            {/* Escaping particles during Pure Visual Pause (Scroll 0.34 -> 0.52) */}
+            {/* Escaping particles during Transformation Pause (Scroll 0.38 -> 0.56) */}
             <motion.g style={{ opacity: driftParticlesOpacity }}>
               <circle cx="68" cy="48" r="0.6" fill="#e8fbff" filter="url(#hero-node-glow)" />
-              <circle cx="65" cy="56" r="0.5" fill="#8edff2" />
-              <circle cx="76" cy="45" r="0.45" fill="#36b7df" />
-              <circle cx="72" cy="62" r="0.5" fill="#8edff2" />
+              <circle cx="64" cy="52" r="0.5" fill="#8edff2" />
+              <circle cx="75" cy="44" r="0.45" fill="#36b7df" />
+              <circle cx="72" cy="60" r="0.5" fill="#8edff2" />
+              <circle cx="78" cy="36" r="0.4" fill="#e8fbff" />
+              <circle cx="82" cy="50" r="0.45" fill="#8edff2" />
             </motion.g>
 
             {/* Phase 1 Edges */}

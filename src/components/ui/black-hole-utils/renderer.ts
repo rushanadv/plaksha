@@ -79,127 +79,117 @@ void main() {
   vec2 centerPos = u_center * u_resolution;
   vec2 p = (gl_FragCoord.xy - centerPos) / min(u_resolution.x, u_resolution.y);
 
-  // Subtle interactive parallax tilt (max 10px)
+  // Subtle interactive parallax tilt (max 8px)
   vec2 mouseOffset = (u_mouse - 0.5) * 0.04;
-  p -= mouseOffset * 0.2;
+  p -= mouseOffset * 0.18;
 
   float r = length(p);
   float phi = atan(p.y, p.x);
 
-  // 1. Schwarzschild Shadow Radius (Prominent, cinematic event horizon)
-  float rs = 0.165;
-  float r_photon = rs * 1.028;
+  // 1. LAYER 1: EVENT HORIZON & PHOTON SPHERE GEOMETRY
+  // Commanding, cinematic event horizon radius (clean circular dark core)
+  float rs = 0.170;
+  float r_photon = rs * 1.022;
 
-  // 2. Relativistic Doppler Beaming (left side rotates toward observer -> brighter & hotter)
-  float doppler = 1.0 - 0.70 * (p.x / (r + 0.015));
-  doppler = clamp(doppler, 0.32, 1.95);
+  // Razor-sharp event horizon boundary mask (0 inside the void, 1 outside)
+  float voidMask = smoothstep(rs * 0.997, rs * 1.003, r);
 
-  // 3. HORIZONTAL ACCRETION DISK (Equatorial Plane Projection)
-  // Tilt = 0.17 gives an authentic, sleek ~5.8:1 horizontal aspect ratio
-  float tilt = 0.17;
-  float diskY = (p.y + rs * 0.04) / tilt;
+  // 2. RELATIVISTIC DOPPLER BEAMING
+  // Approaching material on the left orbits at relativistic speeds -> brighter & hotter
+  float doppler = 1.0 - 0.72 * (p.x / (r + 0.015));
+  doppler = clamp(doppler, 0.28, 2.15);
+
+  // 3. LAYER 2: PHOTON RING (Bent light hugging the event horizon)
+  float photonDist = abs(r - r_photon);
+  float photonRing = exp(-pow(photonDist / 0.0032, 2.0)) * 4.6 * doppler * smoothstep(rs, rs + 0.002, r);
+
+  // 4. LAYER 3: HORIZONTAL ACCRETION DISK (Equatorial Plane)
+  // Tilt = 0.15 gives an authentic, knife-flat ~6.6:1 horizontal aspect ratio
+  float tilt = 0.15;
+  float diskY = (p.y + rs * 0.06) / tilt;
   float diskR = length(vec2(p.x, diskY));
   float diskAngle = atan(diskY, p.x);
 
-  // Radial extent of the physical accretion disk
-  float r_in = rs * 1.22;
-  float r_out = rs * 4.85;
-  float diskRadialMask = smoothstep(r_in, r_in + 0.05, diskR) * (1.0 - smoothstep(r_out * 0.45, r_out, diskR));
+  // Physical disk boundaries (ISCO inner boundary to outer diffuse wing)
+  float r_in = rs * 1.25;
+  float r_out = rs * 5.20;
 
-  // Keplerian differential gas rotation
-  float keplerSpeed = 1.15 / sqrt(max(0.06, diskR));
-  float rotTime = u_time * keplerSpeed * 0.40;
-  vec2 diskUV = vec2(diskAngle * 3.2 + rotTime, diskR * 14.0 - rotTime * 0.3);
-  float diskNoise = 0.52 + 0.48 * fbm(diskUV);
+  // Radial emission: intense power-law falloff near inner edge, smooth outer fade
+  float diskRadialMask = smoothstep(r_in, r_in + 0.04, diskR) *
+                         pow(r_in / max(r_in, diskR), 1.35) *
+                         (1.0 - smoothstep(r_out * 0.42, r_out, diskR));
 
-  // Vertical thickness profile of the flat horizontal disk
-  float diskThickness = tilt * (0.038 + 0.055 * (diskR / r_out));
-  float diskVerticalFalloff = exp(-pow((p.y + rs * 0.04) / diskThickness, 2.0));
+  // Concentric Keplerian laminar grooves & striations (fine disk rings, NOT cloudy smoke)
+  float keplerSpeed = 1.35 / sqrt(max(0.06, diskR));
+  float rotTime = u_time * keplerSpeed * 0.45;
+  float grooves = sin(diskR * 95.0 - rotTime * 0.25) * 0.16 + cos(diskR * 190.0) * 0.09;
+  vec2 streamUV = vec2(diskAngle * 3.8 + rotTime, diskR * 28.0 - rotTime * 0.35);
+  float streamNoise = fbm(streamUV);
+  float diskTexture = clamp(0.72 + 0.22 * streamNoise + grooves, 0.0, 1.45);
 
-  // Front vs Back Disk split:
-  // p.y < -rs * 0.02 is in FRONT of the black hole (slices across the lower half)
-  // p.y > -rs * 0.02 is BEHIND the black hole
-  float isFront = smoothstep(0.04, -0.06, p.y + rs * 0.04);
-  float isBack = 1.0 - isFront;
+  // Knife-thin vertical profile concentrated on equatorial plane
+  float diskThickness = tilt * (0.024 + 0.038 * (diskR / r_out));
+  float diskVerticalFalloff = exp(-pow((p.y + rs * 0.06) / diskThickness, 2.0));
+  float diskLuminance = diskRadialMask * diskVerticalFalloff * diskTexture * doppler * 3.4;
 
-  // Front horizontal disk (cuts directly across the lower front of the void!)
-  float frontDisk = diskRadialMask * diskVerticalFalloff * diskNoise * doppler * 2.8;
-
-  // 4. GRAVITATIONAL LENSING: Upper Crown Arch (The iconic Interstellar feature!)
-  // Rays from the rear of the disk bending over the top of the black hole
-  // The arch wraps around the top half (p.y > -rs * 0.15)
-  float topLensDist = length(vec2(p.x, (p.y - rs * 0.14) / 0.86));
-  float topLensMask = smoothstep(rs * 1.08, rs * 1.24, topLensDist) * (1.0 - smoothstep(rs * 1.85, rs * 2.50, topLensDist));
+  // 5. LAYER 4: GRAVITATIONAL LENSING (Far-side disk bent over the top)
+  // Upper Majestic Crown: rays from the rear disk bent over the top of the black hole
+  float topLensDist = length(vec2(p.x, (p.y - rs * 0.12) / 0.88));
+  float topLensMask = smoothstep(rs * 1.08, rs * 1.22, topLensDist) *
+                      (1.0 - smoothstep(rs * 1.80, rs * 2.40, topLensDist));
   float topAngle = atan(p.y, p.x);
-  float topNoise = 0.55 + 0.45 * fbm(vec2(topAngle * 4.0 + u_time * 0.28, topLensDist * 16.0));
-  // Gate strictly to upper hemisphere with smooth transition to the horizontal disk wings
-  float topGate = smoothstep(-rs * 0.18, rs * 0.25, p.y);
-  float upperLensedArch = topLensMask * topNoise * topGate * doppler * 2.2;
+  float topGrooves = sin(topLensDist * 85.0) * 0.12;
+  float topNoise = fbm(vec2(topAngle * 4.5 + u_time * 0.32, topLensDist * 22.0));
+  float topTexture = clamp(0.74 + 0.22 * topNoise + topGrooves, 0.0, 1.4);
+  // Strictly gates to upper hemisphere, curving over the top of the void
+  float topGate = smoothstep(-rs * 0.15, rs * 0.25, p.y);
+  float upperLensedArch = topLensMask * topTexture * topGate * doppler * 2.7;
 
-  // 5. Lower Lensing Arc (Subtle underbelly lens)
-  float botLensDist = length(vec2(p.x, (p.y + rs * 0.10) / 0.62));
-  float botLensMask = smoothstep(rs * 1.04, rs * 1.16, botLensDist) * (1.0 - smoothstep(rs * 1.45, rs * 1.95, botLensDist));
+  // Lower Lensed Arc: secondary underbelly reflection
+  float botLensDist = length(vec2(p.x, (p.y + rs * 0.08) / 0.65));
+  float botLensMask = smoothstep(rs * 1.04, rs * 1.15, botLensDist) *
+                      (1.0 - smoothstep(rs * 1.40, rs * 1.80, botLensDist));
   float botGate = smoothstep(rs * 0.08, -rs * 0.18, p.y);
-  float lowerLensedArch = botLensMask * (0.6 + 0.4 * topNoise) * botGate * doppler * 0.85;
+  float lowerLensedArch = botLensMask * 0.85 * botGate * doppler;
 
-  // Combine Rear Lensed Energy
-  float lensedEnergy = upperLensedArch + lowerLensedArch;
+  // 6. TOTAL LUMINOUS EMISSION (Strictly occluded by the Event Horizon Void)
+  float totalEmission = (upperLensedArch + lowerLensedArch + diskLuminance + photonRing) * voidMask;
 
-  // 6. Photon Ring (High-energy, razor-sharp photon sphere boundary)
-  float photonDist = abs(r - r_photon);
-  float photonRing = exp(-pow(photonDist / 0.0042, 2.0)) * 3.4 * doppler;
-
-  // 7. Total Plasma Emission
-  // Notice: The rear lensed arch sits BEHIND the event horizon, so it is occluded by the black hole void
-  // But the front horizontal disk passes IN FRONT of the black hole void!
-  float voidMask = smoothstep(rs * 0.993, rs * 1.007, r);
-
-  // Background light (rear disk & lensed arcs + photon ring): occluded by event horizon
-  float rearLight = (lensedEnergy + diskRadialMask * isBack * diskVerticalFalloff * diskNoise * doppler * 1.4 + photonRing) * voidMask;
-
-  // Foreground light (front disk crossing in front): NOT occluded by event horizon!
-  float frontLight = frontDisk * isFront;
-
-  // Total luminous material
-  float totalLuminance = rearLight + frontLight;
-
-  // 8. Color Ramp: Authentic GuruKul Cinematic Cyan/Blue
+  // 7. COLOR RAMP (Verified GuruKul Cool Cyan/Blue Palette)
   vec3 deepBlack  = vec3(0.0078, 0.0118, 0.0157); // #020304
   vec3 outerSmoky = vec3(0.027, 0.082, 0.110);     // #07151c
   vec3 cyanBlue   = vec3(0.212, 0.718, 0.875);     // #36b7df
   vec3 paleCyan   = vec3(0.557, 0.875, 0.949);     // #8edff2
   vec3 hotWhite   = vec3(0.920, 0.985, 1.000);     // #e8fbff
 
-  // Temperature gradient: high Doppler and inner radii reach hot white; outer edges reach deep cyan/smoky blue
-  float heat = clamp(totalLuminance * 0.45 + (doppler - 0.8) * 0.35, 0.0, 1.0);
-  vec3 emissionColor = mix(outerSmoky, cyanBlue, smoothstep(0.05, 0.35, heat));
-  emissionColor = mix(emissionColor, paleCyan, smoothstep(0.35, 0.70, heat));
-  emissionColor = mix(emissionColor, hotWhite, smoothstep(0.70, 0.95, heat));
+  // Temperature gradient: high Doppler and inner radii reach hot white; outer wings transition to cyan/smoky blue
+  float heat = clamp(totalEmission * 0.42 + (doppler - 0.75) * 0.38, 0.0, 1.0);
+  vec3 emissionColor = mix(outerSmoky, cyanBlue, smoothstep(0.04, 0.32, heat));
+  emissionColor = mix(emissionColor, paleCyan, smoothstep(0.32, 0.68, heat));
+  emissionColor = mix(emissionColor, hotWhite, smoothstep(0.68, 0.94, heat));
 
-  vec3 finalColor = emissionColor * totalLuminance;
+  vec3 finalColor = emissionColor * totalEmission;
 
   // Tone-mapping
   finalColor = finalColor / (finalColor + vec3(1.0));
 
-  // Elliptical Edge Fade to prevent ANY rectangular box clipping while letting disk wings sweep wide
-  float edgeDist = length(vec2(p.x * 0.70, p.y * 1.35));
-  float edgeFade = 1.0 - smoothstep(0.60, 0.88, edgeDist);
+  // Elliptical edge fade: wide horizontal disk wings, clean natural feather into deep space
+  float edgeDist = length(vec2(p.x * 0.68, p.y * 1.35));
+  float edgeFade = 1.0 - smoothstep(0.62, 0.90, edgeDist);
   finalColor *= edgeFade;
 
-  // 9. Modulate with Scroll Intensity Uniform
+  // Modulate with Scroll Intensity Uniform
   finalColor *= u_intensity;
 
-  // 10. Alpha Compositing (Event horizon void is pure opaque black, empty space is transparent)
-  // Inside the event horizon void:
-  // If r < rs and frontLight is low: it is a pure pitch-black void!
-  float isPureVoid = (1.0 - voidMask) * (1.0 - clamp(frontLight * 1.5, 0.0, 1.0)) * u_intensity;
+  // Alpha Compositing: empty space is transparent for particle layer, glowing gas has alpha
   float gasLuminance = max(finalColor.r, max(finalColor.g, finalColor.b));
   float gasAlpha = clamp(gasLuminance * 2.8, 0.0, 1.0);
-  float totalAlpha = clamp(isPureVoid + gasAlpha, 0.0, 1.0);
+  float totalAlpha = gasAlpha;
 
-  // Strict Void Color: inside the void without front disk, enforce exact pure #020304 black
-  if (r < rs && frontLight < 0.05) {
+  // 8. ABSOLUTE VOID INTEGRITY (Zero fog, zero texture, zero blue fill inside r <= rs)
+  if (r <= rs) {
     finalColor = deepBlack;
+    totalAlpha = 1.0 * u_intensity;
   }
 
   gl_FragColor = vec4(finalColor, totalAlpha);
