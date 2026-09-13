@@ -478,8 +478,24 @@ export const HeroConstellation: React.FC<HeroConstellationProps> = ({ onOpenUplo
       id="hero"
       className="relative min-h-[102svh] w-full bg-[#020205] overflow-hidden flex flex-col justify-between pt-24 pb-8 select-none"
     >
-      {/* 1. Deep Ambient Particle & Spotlight Field */}
-      <GurukulParticleField className="z-[1]" />
+      {/* PHASE 1 DIAGNOSTIC MARKER */}
+      <div
+        data-scene3-debug
+        style={{
+          position: "absolute",
+          top: 90,
+          right: 30,
+          zIndex: 999,
+          padding: "8px 12px",
+          background: "#00D4FF",
+          color: "#000",
+          fontWeight: 700
+        }}
+      >
+        SCENE 3 VERIFIED
+      </div>
+      {/* 1. Deep Ambient Particle & Spotlight Field (z-[5] so it renders cleanly above background and shield, but behind z-20/z-30 text and UI) */}
+      <GurukulParticleField className="z-[5]" />
 
       {/* 2. 3D Spatial Knowledge Constellation Canvas with Drag Physics */}
       <canvas
@@ -523,6 +539,23 @@ export const HeroConstellation: React.FC<HeroConstellationProps> = ({ onOpenUplo
             AI FOR UNDERSTANDING
           </span>
         </motion.div>
+
+        {/* Diagnostic Marker */}
+        <div
+          data-scene3-debug
+          style={{
+            position: "absolute",
+            top: 90,
+            right: 30,
+            zIndex: 999,
+            padding: "8px 12px",
+            background: "#00D4FF",
+            color: "#000",
+            fontWeight: 700
+          }}
+        >
+          SCENE 3 VERIFIED
+        </div>
 
         {/* Hero Headline with Shimmering Gradient */}
         <motion.h1
