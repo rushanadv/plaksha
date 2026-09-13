@@ -41,34 +41,47 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
 
     let particles: Particle[] = []
 
-    // Test colors specified by prompt: #00D4FF (Cyan) & #EAFBFF (White)
-    const COLOR_CYAN = '0, 212, 255'      // #00D4FF
-    const COLOR_WHITE = '234, 251, 255'   // #EAFBFF
+    // Native GuruKul AI Palette
+    const COLOR_WHITE = '234, 251, 255'   // #EAFBFF (~70%)
+    const COLOR_CYAN = '24, 203, 232'     // #18CBE8 / #00D4FF (~22%)
+    const COLOR_ICY = '133, 223, 242'     // #85DFF2 (~8%)
 
     const initParticles = (w: number, h: number) => {
       width = Math.max(w, 300)
       height = Math.max(h, 300)
 
-      // At least 100 particles on desktop as required
-      const count = width < 640 ? 50 : 120
+      // Roughly 70-110 desktop particles (calibrated ~95)
+      const count = width < 640 ? 38 : 95
 
       particles = []
       for (let i = 0; i < count; i++) {
-        const isCyan = Math.random() < 0.35
-        const rgb = isCyan ? COLOR_CYAN : COLOR_WHITE
+        const rand = Math.random()
+        let rgb = COLOR_WHITE
+        let hasGlow = false
+
+        if (rand < 0.70) {
+          rgb = COLOR_WHITE
+          hasGlow = Math.random() < 0.08
+        } else if (rand < 0.92) {
+          rgb = COLOR_CYAN
+          hasGlow = Math.random() < 0.25
+        } else {
+          rgb = COLOR_ICY
+          hasGlow = true
+        }
 
         particles.push({
           x: Math.random() * width,
           y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 0.2,
-          vy: -(0.40 + Math.random() * 0.75), // Steady upward drift
-          w: 1.8 + Math.random() * 1.6,       // 1.8 - 3.4px wide (unmistakably visible)
-          h: 3.5 + Math.random() * 4.0,       // 3.5 - 7.5px vertical streak
-          baseAlpha: 0.80 + Math.random() * 0.20, // 0.8 - 1.0 opacity
+          vx: (Math.random() - 0.5) * 0.16,
+          vy: -(0.32 + Math.random() * 0.60), // Calm upward drift
+          w: 1.0 + Math.random() * 1.0,       // 1.0 - 2.0px
+          h: 2.2 + Math.random() * 3.0,       // 2.2 - 5.2px delicate vertical streak
+          baseAlpha: 0.35 + Math.random() * 0.40, // 0.35 - 0.75
           twinklePhase: Math.random() * Math.PI * 2,
-          twinkleSpeed: 0.015 + Math.random() * 0.03,
+          twinkleSpeed: 0.012 + Math.random() * 0.025,
           rgb,
-          hasGlow: true,
+          hasGlow,
         })
       }
     }
@@ -100,7 +113,7 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
       ctx.clearRect(0, 0, width, height)
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i]
-        ctx.fillStyle = `rgba(${p.rgb}, ${p.baseAlpha})`
+        ctx.fillStyle = `rgba(${p.rgb}, ${p.baseAlpha * 0.6})`
         ctx.beginPath()
         if (typeof ctx.roundRect === 'function') {
           ctx.roundRect(p.x, p.y, p.w, p.h, p.w / 2)
@@ -122,7 +135,7 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
       // Check for zero-dimension recovery
       const currentW = container.clientWidth || window.innerWidth
       const currentH = container.clientHeight || window.innerHeight
-      if (currentW > 0 && currentH > 0 && (Math.abs(currentW - width) > 10 || Math.abs(currentH - height) > 10)) {
+      if (currentW > 0 && currentH > 0 && (Math.abs(currentW - width) > 8 || Math.abs(currentH - height) > 8)) {
         handleResize(currentW, currentH)
       }
 
@@ -133,14 +146,14 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
 
         // Upward motion with gentle horizontal organic sway
         p.y += p.vy
-        p.x += Math.sin(time * 0.0012 + p.twinklePhase) * 0.18
+        p.x += Math.sin(time * 0.0012 + p.twinklePhase) * 0.14
 
         // Smooth vertical fade to eliminate popping at top & bottom
         let edgeAlpha = 1.0
-        if (p.y > height - 60) {
-          edgeAlpha = Math.max(0, (height - p.y) / 60)
-        } else if (p.y < 80) {
-          edgeAlpha = Math.max(0, p.y / 80)
+        if (p.y > height - 70) {
+          edgeAlpha = Math.max(0, (height - p.y) / 70)
+        } else if (p.y < 90) {
+          edgeAlpha = Math.max(0, p.y / 90)
         }
 
         const twinkle = 0.85 + 0.15 * Math.sin(time * p.twinkleSpeed + p.twinklePhase)
@@ -153,8 +166,8 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
         }
 
         if (p.hasGlow) {
-          ctx.shadowColor = '#00D4FF'
-          ctx.shadowBlur = 8
+          ctx.shadowColor = '#18CBE8'
+          ctx.shadowBlur = 6
         } else {
           ctx.shadowColor = 'transparent'
           ctx.shadowBlur = 0
@@ -223,36 +236,36 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
       style={{ touchAction: 'none' }}
     >
       {/* ============================================================ */}
-      {/* 1. ATMOSPHERIC SPOTLIGHT BEAMS (0.35 Opacity Test)          */}
+      {/* 1. ATMOSPHERIC SPOTLIGHT BEAMS (Soft, restrained depth)      */}
       {/* ============================================================ */}
-      <div className="absolute -top-[15%] left-1/2 -translate-x-1/2 w-[140vw] max-w-[1600px] h-[98vh] pointer-events-none opacity-[0.35] mix-blend-screen overflow-hidden">
+      <div className="absolute -top-[15%] left-1/2 -translate-x-1/2 w-[140vw] max-w-[1600px] h-[98vh] pointer-events-none opacity-[0.16] mix-blend-screen overflow-hidden">
         {/* Beam 1: Left Angled Volumetric Cone */}
         <div
-          className="absolute top-0 left-1/2 w-[40vw] max-w-[520px] h-[95vh] origin-top -translate-x-[68%] gurukul-beam-left"
+          className="absolute top-0 left-1/2 w-[38vw] max-w-[500px] h-[92vh] origin-top -translate-x-[68%] gurukul-beam-left"
           style={{
-            background: 'linear-gradient(145deg, rgba(0, 212, 255, 0.60) 0%, rgba(234, 251, 255, 0.25) 35%, transparent 75%)',
+            background: 'linear-gradient(145deg, rgba(24, 203, 232, 0.45) 0%, rgba(133, 223, 242, 0.16) 32%, transparent 75%)',
             clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-            filter: 'blur(30px)',
+            filter: 'blur(28px)',
           }}
         />
 
         {/* Beam 2: Center Soft Ambient Shaft */}
         <div
-          className="absolute top-0 left-1/2 w-[32vw] max-w-[420px] h-[98vh] origin-top -translate-x-1/2 gurukul-beam-center"
+          className="absolute top-0 left-1/2 w-[30vw] max-w-[400px] h-[96vh] origin-top -translate-x-1/2 gurukul-beam-center"
           style={{
-            background: 'linear-gradient(180deg, rgba(234, 251, 255, 0.50) 0%, rgba(0, 212, 255, 0.30) 35%, transparent 80%)',
+            background: 'linear-gradient(180deg, rgba(234, 251, 255, 0.35) 0%, rgba(24, 203, 232, 0.18) 35%, transparent 80%)',
             clipPath: 'polygon(50% 0%, 6% 100%, 94% 100%)',
-            filter: 'blur(28px)',
+            filter: 'blur(26px)',
           }}
         />
 
         {/* Beam 3: Right Angled Volumetric Cone */}
         <div
-          className="absolute top-0 left-1/2 w-[40vw] max-w-[520px] h-[95vh] origin-top -translate-x-[32%] gurukul-beam-right"
+          className="absolute top-0 left-1/2 w-[38vw] max-w-[500px] h-[92vh] origin-top -translate-x-[32%] gurukul-beam-right"
           style={{
-            background: 'linear-gradient(215deg, rgba(0, 212, 255, 0.60) 0%, rgba(234, 251, 255, 0.25) 35%, transparent 75%)',
+            background: 'linear-gradient(215deg, rgba(24, 203, 232, 0.45) 0%, rgba(133, 223, 242, 0.16) 32%, transparent 75%)',
             clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-            filter: 'blur(30px)',
+            filter: 'blur(28px)',
           }}
         />
       </div>
@@ -260,10 +273,10 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
       {/* ============================================================ */}
       {/* 2. MINIMAL ARCHITECTURAL ACCENT LINES                        */}
       {/* ============================================================ */}
-      <div className="absolute top-[20%] left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400/[0.20] to-transparent pointer-events-none" />
-      <div className="absolute top-[78%] left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/[0.15] to-transparent pointer-events-none" />
-      <div className="hidden md:block absolute top-0 left-[12%] w-[1px] h-full bg-gradient-to-b from-transparent via-cyan-400/[0.14] to-transparent pointer-events-none" />
-      <div className="hidden md:block absolute top-0 right-[12%] w-[1px] h-full bg-gradient-to-b from-transparent via-cyan-400/[0.14] to-transparent pointer-events-none" />
+      <div className="absolute top-[20%] left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400/[0.10] to-transparent pointer-events-none" />
+      <div className="absolute top-[78%] left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/[0.08] to-transparent pointer-events-none" />
+      <div className="hidden md:block absolute top-0 left-[12%] w-[1px] h-full bg-gradient-to-b from-transparent via-cyan-400/[0.07] to-transparent pointer-events-none" />
+      <div className="hidden md:block absolute top-0 right-[12%] w-[1px] h-full bg-gradient-to-b from-transparent via-cyan-400/[0.07] to-transparent pointer-events-none" />
 
       {/* ============================================================ */}
       {/* 3. UPWARD-MOVING LIGHT PARTICLE CANVAS                       */}
@@ -276,19 +289,19 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
       {/* Scoped Keyframes for Ambient Spotlight Sway */}
       <style>{`
         @keyframes beamSwayLeft {
-          0% { transform: translate(-68%, 0) rotate(-15deg) scaleX(0.96); opacity: 0.85; }
+          0% { transform: translate(-68%, 0) rotate(-15deg) scaleX(0.96); opacity: 0.82; }
           50% { transform: translate(-68%, 0) rotate(-11deg) scaleX(1.04); opacity: 1.0; }
-          100% { transform: translate(-68%, 0) rotate(-15deg) scaleX(0.96); opacity: 0.85; }
+          100% { transform: translate(-68%, 0) rotate(-15deg) scaleX(0.96); opacity: 0.82; }
         }
         @keyframes beamSwayCenter {
-          0% { transform: translate(-50%, 0) scale(0.96); opacity: 0.90; }
+          0% { transform: translate(-50%, 0) scale(0.96); opacity: 0.88; }
           50% { transform: translate(-50%, 0) scale(1.03); opacity: 1.0; }
-          100% { transform: translate(-50%, 0) scale(0.96); opacity: 0.90; }
+          100% { transform: translate(-50%, 0) scale(0.96); opacity: 0.88; }
         }
         @keyframes beamSwayRight {
-          0% { transform: translate(-32%, 0) rotate(15deg) scaleX(0.96); opacity: 0.85; }
+          0% { transform: translate(-32%, 0) rotate(15deg) scaleX(0.96); opacity: 0.82; }
           50% { transform: translate(-32%, 0) rotate(11deg) scaleX(1.04); opacity: 1.0; }
-          100% { transform: translate(-32%, 0) rotate(15deg) scaleX(0.96); opacity: 0.85; }
+          100% { transform: translate(-32%, 0) rotate(15deg) scaleX(0.96); opacity: 0.82; }
         }
         .gurukul-beam-left {
           animation: beamSwayLeft 18s ease-in-out infinite alternate;
@@ -304,8 +317,8 @@ export const GurukulParticleField: React.FC<GurukulParticleFieldProps> = ({ clas
             display: none !important;
           }
           .gurukul-beam-center {
-            opacity: 0.20 !important;
-            width: 80vw !important;
+            opacity: 0.10 !important;
+            width: 75vw !important;
           }
         }
         @media (prefers-reduced-motion: reduce) {
