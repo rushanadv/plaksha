@@ -14,6 +14,7 @@ import {
   Volume2,
 } from 'lucide-react'
 import { soundEngine } from '../lib/audio-engine'
+import { GurukulParticleField } from './ui/gurukul-particle-field'
 
 interface HeroConstellationProps {
   onOpenUploadModal: () => void
@@ -475,16 +476,19 @@ export const HeroConstellation: React.FC<HeroConstellationProps> = ({ onOpenUplo
   return (
     <section
       id="hero"
-      className="relative min-h-[102svh] w-full bg-transparent overflow-hidden flex flex-col justify-between pt-24 pb-8 select-none"
+      className="relative min-h-[102svh] w-full bg-[#020205] overflow-hidden flex flex-col justify-between pt-24 pb-8 select-none"
     >
-      {/* 3D Spatial Knowledge Constellation Canvas with Drag Physics */}
+      {/* 1. Deep Ambient Particle & Spotlight Field */}
+      <GurukulParticleField className="z-[1]" />
+
+      {/* 2. 3D Spatial Knowledge Constellation Canvas with Drag Physics */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 z-0 pointer-events-auto cursor-grab active:cursor-grabbing w-full h-full block"
+        className="absolute inset-0 z-[2] pointer-events-auto cursor-grab active:cursor-grabbing w-full h-full block"
       />
 
-      {/* Atmospheric Central Contrast Shield */}
-      <div className="absolute inset-0 z-10 pointer-events-none bg-[radial-gradient(ellipse_60%_50%_at_50%_48%,#020205_25%,rgba(2,2,5,0.75)_65%,transparent_100%)]" />
+      {/* 3. Atmospheric Central Contrast Shield (subtle contrast that preserves particle & beam visibility) */}
+      <div className="absolute inset-0 z-[3] pointer-events-none bg-[radial-gradient(ellipse_65%_55%_at_50%_48%,rgba(2,2,5,0.30)_0%,rgba(2,2,5,0.60)_55%,transparent_100%)]" />
 
       {/* Top Observatory Telemetry Bar */}
       <div className="relative z-20 max-w-7xl mx-auto w-full px-6 flex items-center justify-between pointer-events-none">
