@@ -475,7 +475,7 @@ export const HeroConstellation: React.FC<HeroConstellationProps> = ({ onOpenUplo
   return (
     <section
       id="hero"
-      className="relative min-h-[102svh] w-full bg-[#020205] overflow-hidden flex flex-col justify-between pt-24 pb-8 select-none"
+      className="relative min-h-[102svh] w-full bg-transparent overflow-hidden flex flex-col justify-between pt-24 pb-8 select-none"
     >
       {/* 3D Spatial Knowledge Constellation Canvas with Drag Physics */}
       <canvas

@@ -6,6 +6,7 @@ import { LiquidButton } from './ui/liquid-glass-button'
 import { ParticleBackground } from './ui/particle-background'
 import { KnowledgeConstellationCanvas } from './ui/knowledge-constellation-canvas'
 import { SceneTransitionBridge } from './ui/SceneTransitionBridge'
+import { GurukulParticleField } from './ui/gurukul-particle-field'
 import { HeroConstellation } from './HeroConstellation'
 import { soundEngine } from '../lib/audio-engine'
 
@@ -412,8 +413,9 @@ export const KnowledgeSingularityHero: React.FC<KnowledgeSingularityHeroProps> =
             scale: prefersReduced ? 1 : scene3Scale,
             visibility: scene3Visibility as any,
           }}
-          className="absolute inset-0 z-40 w-full h-full overflow-hidden pointer-events-auto"
+          className="absolute inset-0 z-40 w-full h-full overflow-hidden pointer-events-auto bg-[#020205]"
         >
+          <GurukulParticleField />
           {children || <HeroConstellation onOpenUploadModal={onOpenUploadModal} />}
         </motion.div>
 
